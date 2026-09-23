@@ -19,6 +19,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # flat layout: all files in one folder
 import calibrate as K          # noqa: E402
+import inactives as IN         # noqa: E402
 import edge as E               # noqa: E402
 from game import Model         # noqa: E402
 from odds import decimal_to_american  # noqa: E402
@@ -184,7 +185,11 @@ def build(season, week, n_sims=20000, overrides=([], {}, {})):
     book = fetch_odds(this_week)
     out_names, questionable, snap_limit = overrides
     auto_q = auto_injury_watch(m, week) or {}
-    questionable = {**auto_q, **questionable}          # anything you set by hand wins
+    # live availability (Sleeper) closes the gap between Friday's report and kickoff
+    live_out, live_q = IN.availability(os.environ.get("NFL_EDGE_CACHE", "/tmp/nfl-cache"),
+                                      m.features(week)[1])
+    out_names = list(dict.fromkeys(list(out_names) + live_out))
+    questionable = {**auto_q, **live_q, **questionable}   # live beats auto; your overrides beat both
     fair = lambda p: decimal_to_american(1 / max(min(p, 0.97), 0.02))
     out = {"season": season, "week": week, "odds": bool(book),
            "generated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()), "games": []}
@@ -239,8 +244,24 @@ def build(season, week, n_sims=20000, overrides=([], {}, {})):
                     if 0.35 < p < 0.9:
                         pl["bets"].append({"bet": f"{int(ln + 0.5)}+ {stat.replace('_', ' ')}",
                                            "prob": round(p, 3), "fair": fair(p)})
-            for b in pl["bets"]:
-                attach_price(b, r.player, bk["props"])
+            # FanDuel posts its own numbers (45.5 yards, 4.5 catches), not our ladder - so price the
+            # model against the lines you can actually bet, and drop our ladder for that stat.
+            posted = [(st, ln, pr) for (pname, st, ln), pr in bk["props"].items() if pname == r.player]
+            if posted:
+                covered = {st for st, _, _ in posted}
+                pl["bets"] = [b for b in pl["bets"]
+                              if ("anytime_td" if "TD" in b["bet"] else
+                                  b["bet"].split("+ ")[-1].replace(" ", "_")) not in covered]
+                from odds import american_to_decimal
+                for st, ln, price in posted:
+                    try:
+                        p = K.apply(sim.prob(r.player, st, ln), st, cal)
+                    except Exception:
+                        continue
+                    label = "anytime TD" if st == "anytime_td" else f"{int(ln + 0.5)}+ {st.replace('_', ' ')}"
+                    ev = round(p * american_to_decimal(price) - 1, 3)
+                    pl["bets"].append({"bet": label, "prob": round(p, 3), "fair": fair(p),
+                                       "book": int(price), "ev": ev, "value": ev > 0.02})
             if pl["bets"]:
                 game["players"].append(pl)
         legs = []

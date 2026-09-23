@@ -274,6 +274,32 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
         FanDuel there instead of guessing. Player bets are where it has an opinion.</p>
     </div>
     <div class="card">
+      <p style="margin:0 0 10px"><b>When this page updates.</b> It rebuilds itself on a schedule —
+        nobody presses a button:</p>
+      <p style="margin:0 0 6px"><b>Wed evening</b> — Thursday night game, with FanDuel prop prices</p>
+      <p style="margin:0 0 6px"><b>Sat 1pm</b> — the whole Sunday slate, with FanDuel prop prices</p>
+      <p style="margin:0 0 6px"><b>Sun evening</b> — Monday night game, with FanDuel prop prices</p>
+      <p style="margin:0 0 10px"><b>~90 minutes before each kickoff</b> — a final check of who's playing,
+        plus refreshed spreads, totals and moneylines</p>
+      <p style="margin:0"><b>Why props land a day early rather than constantly:</b> pulling prop prices
+        costs money per game, so they're pulled once per slate, about a day out — which is when
+        most people bet. Until then a bet shows the model's fair price only.</p>
+    </div>
+    <div class="card">
+      <p style="margin:0 0 10px"><b>Injuries.</b> Three checks, so a hurt player doesn't show up as
+        a pick:</p>
+      <p style="margin:0 0 6px">1. <b>The official injury report</b> (published Wed–Fri). Anyone listed
+        Out or Doubtful is removed and his workload goes to teammates.</p>
+      <p style="margin:0 0 6px">2. <b>Live status</b>, rechecked on every update including the one
+        ~90 minutes before kickoff. If a player is ruled out late, he drops off at the next update.</p>
+      <p style="margin:0 0 10px">3. <b>An early-warning check</b> — anyone whose playing time collapsed
+        last week is treated as a coin flip to play, before it's official.</p>
+      <p style="margin:0"><b>Still worth a glance:</b> a player listed <b>questionable</b> is simulated as
+        50/50, not removed. If he's scratched minutes before kickoff, this page may not have caught it
+        yet. Check the app before you bet.</p>
+    </div>
+
+    <div class="card">
       <p style="margin:0 0 10px"><b>Where the numbers come from.</b> Every game is simulated 20,000
         times using play-by-play data from the last three seasons: how often each player is used,
         how his team plays, who's hurt, who's inactive, and the weather.</p>
@@ -414,7 +440,9 @@ const byTime = [...DATA.games].sort((a,b) => a.kickoff.localeCompare(b.kickoff))
 const gbox = document.getElementById("games");
 byTime.forEach(g => {
   const best = bestPerPlayer(g.players.flatMap(p => p.bets.map(b =>
-    ({...b, who:p.name, proj:p.proj, score:conviction(b, p.proj)}))).sort((a,b) => b.score - a.score)).slice(0, 6);
+    ({...b, who:p.name, proj:p.proj, score:conviction(b, p.proj)})))
+    .filter(b => b.fair >= PRICE_FLOOR)          // same floor as the rest of the site
+    .sort((a,b) => b.score - a.score)).slice(0, 6);
   const d = document.createElement("details");
   d.innerHTML = `<summary><span class="match"><i class="dot" style="background:${COLORS[g.away]}"></i><i class="dot" style="background:${COLORS[g.home]}"></i>
       ${TEAMS[g.away]} at ${TEAMS[g.home]}</span>
