@@ -30,6 +30,11 @@ from odds import decimal_to_american  # noqa: E402
 # "full" on a 16-game slate is roughly 67 credits, so budget about 7 full runs a month on the
 # free tier — or run "lines" on the early builds and "full" once near kickoff.
 ODDS_MODE = os.environ.get("ODDS_MODE", "full" if os.environ.get("ODDS_API_KEY") else "off")
+# Props cost 4 credits per game (one per market), so only pull them for games kicking off inside
+# this window. At 30 hours, the Saturday-afternoon run covers the whole Sunday slate, the Sunday-
+# evening run covers Monday night, and the Wednesday-evening run covers Thursday night — so prices
+# are posted roughly a day before each game. Other runs take game lines only (3 credits a slate).
+PROPS_WINDOW_HOURS = float(os.environ.get("PROPS_WINDOW_HOURS", 30))
 PROP_MARKETS = ["player_anytime_td", "player_receptions", "player_reception_yds", "player_rush_yds"]
 STAT_TO_MARKET = {"receptions": "receptions", "rec_yds": "rec_yds", "rush_yds": "rush_yds",
                   "anytime TD": "anytime_td"}
@@ -48,9 +53,9 @@ def current_week(model, season):
     return int(upcoming["week"].min()) if len(upcoming) else int(s["week"].max())
 
 
-def fetch_odds():
-    """FanDuel prices, keyed by matchup. Returns {} if no key, or if the call fails —
-    the site is fully usable either way."""
+def fetch_odds(this_week=None):
+    """FanDuel prices for THIS WEEK's games only, keyed by matchup. Returns {} if there's no key or
+    the call fails — the site is fully usable either way."""
     if ODDS_MODE == "off":
         return {}
     try:
@@ -64,9 +69,14 @@ def fetch_odds():
             return {}
         ev["h"], ev["a"] = ev["home"].map(TEAM_NAMES), ev["away"].map(TEAM_NAMES)
         book = {}
+        now = datetime.now(timezone.utc)
+        skipped_other_week = props_pulled = 0
         for (eid, h, a), grp in ev.groupby(["event_id", "h", "a"]):
             if not h or not a:
                 continue
+            if this_week is not None and f"{a}@{h}" not in this_week:
+                skipped_other_week += 1
+                continue                      # a later week's game: don't spend credits on it
             entry = {"lines": {}, "props": {}}
             for r in grp.itertuples():
                 if r.market == "h2h":
@@ -75,9 +85,12 @@ def fetch_odds():
                     entry["lines"].setdefault("spread", {})[TEAM_NAMES.get(r.name, r.name)] = (r.point, r.price)
                 elif r.market == "totals":
                     entry["lines"].setdefault("total", {})[r.name.lower()] = (r.point, r.price)
-            if ODDS_MODE == "full":
+            kick = pd.to_datetime(grp["commence"].iloc[0], utc=True, errors="coerce")
+            soon = kick is not pd.NaT and (kick - now).total_seconds() / 3600 <= PROPS_WINDOW_HOURS
+            if ODDS_MODE == "full" and soon:
                 try:
                     pr = O.player_props(eid, markets=PROP_MARKETS)
+                    props_pulled += 1
                     for r in pr.itertuples():
                         if r.side != "over":
                             continue
@@ -86,7 +99,8 @@ def fetch_odds():
                 except Exception as ex:
                     print(f"  props unavailable for {a}@{h}: {ex}")
             book[f"{a}@{h}"] = entry
-        print(f"FanDuel odds pulled for {len(book)} games (mode: {ODDS_MODE})")
+        print(f"FanDuel odds: {len(book)} games this week, player props for {props_pulled} of them "
+              f"(kicking off within {PROPS_WINDOW_HOURS:g}h), {skipped_other_week} later-week games skipped")
         return book
     except Exception as ex:
         print(f"odds unavailable ({ex}); building with model prices only")
@@ -166,7 +180,8 @@ def auto_injury_watch(m, week):
 def build(season, week, n_sims=20000, overrides=([], {}, {})):
     m = Model(season)
     cal = K.load()
-    book = fetch_odds()
+    this_week = {f"{g.away_team}@{g.home_team}" for g in m.sched[m.sched["week"] == week].itertuples()}
+    book = fetch_odds(this_week)
     out_names, questionable, snap_limit = overrides
     auto_q = auto_injury_watch(m, week) or {}
     questionable = {**auto_q, **questionable}          # anything you set by hand wins

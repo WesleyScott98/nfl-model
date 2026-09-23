@@ -137,11 +137,23 @@ def weather_forecast(home, gameday, gametime):
     try:
         kick = dt.datetime.fromisoformat(f"{gameday}T{gametime}").replace(tzinfo=ZoneInfo("America/New_York"))
         kick = kick.astimezone(dt.timezone.utc)
-        r = requests.get("https://api.open-meteo.com/v1/forecast", timeout=15, params={
-            "latitude": lat, "longitude": lon, "hourly": "temperature_2m,precipitation,wind_speed_10m",
-            "temperature_unit": "fahrenheit", "wind_speed_unit": "mph", "timezone": "UTC",
-            "start_date": kick.date().isoformat(),
-            "end_date": (kick + dt.timedelta(hours=4)).date().isoformat()})
+        params = {"latitude": lat, "longitude": lon, "hourly": "temperature_2m,precipitation,wind_speed_10m",
+                  "temperature_unit": "fahrenheit", "wind_speed_unit": "mph", "timezone": "UTC",
+                  "start_date": kick.date().isoformat(),
+                  "end_date": (kick + dt.timedelta(hours=4)).date().isoformat()}
+        r = None
+        for attempt, wait in enumerate((0, 2, 5)):      # the free forecast API is often slow, so be patient
+            if wait:
+                import time as _t
+                _t.sleep(wait)
+            try:
+                r = requests.get("https://api.open-meteo.com/v1/forecast", timeout=40, params=params)
+                r.raise_for_status()
+                break
+            except Exception:
+                r = None
+                if attempt == 2:
+                    raise
         r.raise_for_status()
         h = pd.DataFrame(r.json()["hourly"])
         h["time"] = pd.to_datetime(h["time"], utc=True)
