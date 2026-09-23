@@ -1,0 +1,6 @@
+{
+  "_comment": "Manual corrections for news the data feed hasn't caught up with. Injury reports publish Wednesday, so a Monday-night injury is invisible until then. Edit this file, commit, and the next build uses it.",
+  "out": [],
+  "questionable": {},
+  "snap_limit": {}
+}

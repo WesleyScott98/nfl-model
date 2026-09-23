@@ -1,0 +1,7 @@
+nflreadpy>=0.1.5
+polars>=1.0
+pyarrow
+pandas>=2.0
+numpy
+scipy
+requests

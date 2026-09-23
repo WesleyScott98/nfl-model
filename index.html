@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NFL Model">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F4F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1319" media="(prefers-color-scheme: dark)">
+<title>Rob's NFL Model — Week 3 picks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F4F0; --card:#FFFFFF; --ink:#141F33; --soft:#5A6675; --rule:#D9DED4;
+  --pen:#12467F; --stamp:#B03A2E; --win:#2E7D57; --warn:#B8860B;
+  --shadow:0 1px 2px rgba(20,31,51,.06), 0 6px 18px rgba(20,31,51,.05);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1319; --card:#171D26; --ink:#E9EDE8; --soft:#98A4B2; --rule:#28313C;
+    --pen:#7FB0F2; --stamp:#E37C70; --win:#6BC79A; --warn:#E0B44E;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1319; --card:#171D26; --ink:#E9EDE8; --soft:#98A4B2; --rule:#28313C;
+  --pen:#7FB0F2; --stamp:#E37C70; --win:#6BC79A; --warn:#E0B44E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{overscroll-behavior-y:none}
+button,summary,.chip,nav button{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none}
+input,textarea{-webkit-user-select:text;user-select:text}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Instrument Sans",system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;
+  -webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:var(--paper);
+  border-bottom:1px solid var(--rule);padding-top:env(safe-area-inset-top,0px)}
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+  @supports (background:color-mix(in srgb,red 50%,transparent)){
+    header{background:color-mix(in srgb,var(--paper) 88%,transparent);
+      -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  }
+}
+.bar{max-width:680px;margin:0 auto;padding:12px 18px 0;display:flex;align-items:baseline;gap:10px}
+.brand{font-family:"Bricolage Grotesque",Georgia,serif;font-weight:800;font-size:21px;
+  letter-spacing:-.02em;margin:0}
+.brand span{background:linear-gradient(92deg,var(--stamp),var(--pen));-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+@supports not (background-clip:text){ .brand span{color:var(--stamp)} }
+.wk{color:var(--soft);font-size:13px;margin-left:auto}
+nav{max-width:680px;margin:0 auto;padding:6px 18px 0;display:flex;gap:2px;overflow-x:auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+nav::-webkit-scrollbar{display:none}
+nav button{font:inherit;font-size:14.5px;font-weight:600;color:var(--soft);background:none;border:0;
+  min-height:44px;padding:11px 13px 12px;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--stamp)}
+nav button:active{opacity:.6}
+nav button:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--pen);outline-offset:2px;border-radius:3px}
+
+main{max-width:680px;margin:0 auto;padding:18px 18px 70px}
+
+/* chat */
+.chat{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;
+  box-shadow:var(--shadow)}
+.chat h2{font-family:"Bricolage Grotesque",Georgia,serif;font-size:18px;margin:0 0 3px;letter-spacing:-.01em}
+.chat p.sub{color:var(--soft);font-size:13.5px;margin:0 0 11px}
+.inputrow{display:flex;gap:8px}
+textarea{flex:1;min-height:46px;max-height:130px;resize:none;padding:11px 12px;border-radius:10px;
+  border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:inherit;font-size:16px}
+.send{border:0;background:var(--ink);color:var(--paper);border-radius:10px;padding:0 18px;min-height:46px;
+  font:inherit;font-weight:600;font-size:15px;cursor:pointer}
+.send:active{transform:translateY(1px)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+.chip{font:inherit;font-size:13.5px;font-weight:500;min-height:38px;padding:8px 14px;border-radius:99px;
+  cursor:pointer;border:1px solid var(--rule);background:transparent;color:var(--pen)}
+.chip:active{background:var(--rule)}
+.chip:hover{border-color:var(--pen)}
+.answer{margin-top:13px;padding-top:13px;border-top:1px dashed var(--rule);display:none}
+.answer.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.ans-head{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px}
+.ans-head span{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--soft)}
+.close{font:inherit;font-size:12.5px;font-weight:600;color:var(--soft);background:none;border:0;
+  padding:6px 2px;cursor:pointer;min-height:34px}
+.close:active{opacity:.6}
+.jump{display:block;width:100%;margin-top:4px;padding:12px;border-radius:10px;cursor:pointer;
+  border:1px dashed var(--rule);background:transparent;color:var(--pen);font:inherit;font-weight:600;font-size:14px}
+.jump:active{background:var(--rule)}
+.answer .lead{font-size:14.5px;color:var(--soft);margin:0 0 11px}
+.answer strong{color:var(--stamp)}
+.dots::after{content:"";animation:d 1.1s steps(4,end) infinite}
+@keyframes d{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+/* headline pick */
+.hero{position:relative;overflow:hidden;border-radius:16px;padding:18px 16px;margin-bottom:14px;
+  color:var(--team);background:
+    linear-gradient(135deg, color-mix(in srgb,var(--team) 16%,var(--card)), var(--card) 72%);
+  border:1px solid color-mix(in srgb,var(--team) 34%,var(--rule));
+  box-shadow:var(--shadow);display:flex;align-items:center;gap:14px}
+@supports not (background:color-mix(in srgb,red 50%,white)){ .hero{background:var(--card)} }
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 100% 0%, color-mix(in srgb,var(--team) 20%,transparent), transparent 60%)}
+.hero-txt{flex:1;min-width:0;position:relative;z-index:1}
+.eyebrow{margin:0 0 5px;font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--team);opacity:.9}
+.hero-bet{font-family:"Bricolage Grotesque",Georgia,serif;font-weight:800;font-size:clamp(23px,6.4vw,30px);
+  line-height:1.03;letter-spacing:-.025em;margin:0;color:var(--ink)}
+.hero-line{margin:2px 0 7px;font-size:16px;font-weight:600;color:var(--ink)}
+.hero-why{margin:0;font-size:13px;color:var(--soft)}
+.hero-why b{color:var(--team)}
+.ring{width:82px;height:82px;flex:none;position:relative;z-index:1;color:var(--team)}
+.ring circle:last-of-type{animation:ring 1s cubic-bezier(.22,1,.36,1) .15s forwards}
+@keyframes ring{to{stroke-dashoffset:var(--dash)}}
+.ring-num{font-family:"Bricolage Grotesque",Georgia,serif;font-weight:800;font-size:20px;fill:var(--ink)}
+
+/* confidence pill */
+.pill.val{color:var(--win);border-color:var(--win)}
+.pill{font-size:11.5px;font-weight:700;letter-spacing:.02em;padding:2px 9px;border-radius:99px;
+  border:1px solid currentColor;background:color-mix(in srgb,currentColor 12%,transparent)}
+@supports not (background:color-mix(in srgb,red 50%,white)){ .pill{background:transparent} }
+
+/* team dots */
+.dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:3px;vertical-align:1px}
+.dot + .dot{margin-right:7px}
+
+/* section */
+.view{display:none}.view.on{display:block;animation:fade .2s ease}
+h3{font-family:"Bricolage Grotesque",Georgia,serif;font-size:20px;letter-spacing:-.015em;margin:26px 0 3px}
+.note{color:var(--soft);font-size:13.5px;margin:0 0 14px}
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}
+.filters button{font:inherit;font-size:13.5px;font-weight:500;min-height:38px;padding:8px 14px;
+  border-radius:99px;border:1px solid var(--rule);background:transparent;color:var(--soft);cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:600}
+
+/* pick card */
+.card{position:relative;background:var(--card);border:1px solid var(--rule);border-radius:12px;
+  padding:13px 14px 13px 16px;margin-bottom:9px;box-shadow:var(--shadow);overflow:hidden;
+  transition:transform .14s ease, box-shadow .14s ease}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--team,var(--pen))}
+.card:active{transform:scale(.995)}
+.top{display:flex;align-items:baseline;gap:10px}
+.bet{font-weight:600;font-size:15.5px;line-height:1.3;flex:1}
+.big{font-family:"Bricolage Grotesque",Georgia,serif;font-weight:800;font-size:24px;line-height:1;
+  letter-spacing:-.025em;white-space:nowrap}
+.s-hi{color:var(--win)} .s-mid{color:var(--warn)} .s-lo{color:var(--stamp)}
+.meter{height:5px;border-radius:99px;background:var(--rule);margin:9px 0 8px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;border-radius:99px;background:currentColor;
+  animation:fill .85s cubic-bezier(.22,1,.36,1) .1s forwards}
+@keyframes fill{to{width:var(--w)}}
+.why{color:var(--soft);font-size:13px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:2px}
+.why b{color:var(--pen);font-weight:600}
+.tagline{font-size:12.5px;font-weight:600;padding:3px 8px;border-radius:99px;border:1px solid currentColor}
+
+/* games / lines */
+details{background:var(--card);border:1px solid var(--rule);border-radius:12px;margin-bottom:9px;
+  box-shadow:var(--shadow);overflow:hidden}
+summary{cursor:pointer;list-style:none;padding:14px;min-height:52px;display:flex;
+  justify-content:space-between;gap:12px;align-items:center}
+summary:active{background:color-mix(in srgb,var(--rule) 35%,transparent)}
+summary::-webkit-details-marker{display:none}
+.match{font-weight:600;font-size:15.5px}
+.right{color:var(--soft);font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.caret{width:9px;height:9px;border-right:2px solid var(--soft);border-bottom:2px solid var(--soft);
+  transform:rotate(45deg);transition:transform .18s}
+details[open] .caret{transform:rotate(-135deg)}
+.body{padding:0 14px 13px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--rule);
+  font-size:14.5px}
+.row b{font-weight:600}
+.score{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0 10px;
+  font-size:15px;font-weight:600}
+.score span{color:var(--soft);font-weight:500;font-size:13px}
+.winbar{height:7px;border-radius:99px;overflow:hidden;display:flex;margin:4px 0 12px}
+.winbar i{display:block;height:100%}
+footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);font-size:12.5px;line-height:1.55}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar"><p class="brand">Rob's <span>NFL Model</span></p><p class="wk" id="wk"></p></div>
+  <nav id="nav" role="tablist">
+    <button role="tab" aria-selected="true" data-v="picks">Best bets</button>
+    <button role="tab" aria-selected="false" data-v="parlays">Parlays</button>
+    <button role="tab" aria-selected="false" data-v="games">By game</button>
+    <button role="tab" aria-selected="false" data-v="lines">Game lines</button>
+    <button role="tab" aria-selected="false" data-v="how">How it works</button>
+  </nav>
+</header>
+
+<main>
+  <section class="chat">
+    <h2>What are you looking for?</h2>
+    <p class="sub">Ask for a player, a team, a night, or just the best plays.</p>
+    <div class="inputrow">
+      <textarea id="q" rows="1" placeholder="Best bets this week" enterkeyhint="search"
+        autocapitalize="sentences" autocorrect="on" spellcheck="false"></textarea>
+      <button class="send" id="go">Ask</button>
+    </div>
+    <div class="chips" id="chips">
+      <button class="chip" data-ex="best bets this week">Best bets</button>
+      <button class="chip" data-ex="best parlays">Parlays</button>
+      <button class="chip" data-ex="best touchdown picks">Touchdowns</button>
+      <button class="chip" data-ex="longshots with a big payout">Longshots</button>
+      <button class="chip" data-ex="best bets for the Thursday night game">Thursday</button>
+      <button class="chip" data-ex="best bets for the Monday night game">Monday</button>
+    </div>
+    <div class="answer" id="ans"></div>
+  </section>
+
+  <div class="view on" id="v-picks">
+    <h3>Best bets</h3>
+    <p class="note">Ranked by how strongly the model likes them, not by the odds offered.
+      Bets priced shorter than −350 are left out — too much risk for the return.</p>
+    <div class="filters" id="filters">
+      <button data-k="all" aria-pressed="true">Everything</button>
+      <button data-k="TD" aria-pressed="false">Touchdowns</button>
+      <button data-k="catches" aria-pressed="false">Catches</button>
+      <button data-k="rec" aria-pressed="false">Receiving</button>
+      <button data-k="rush" aria-pressed="false">Rushing</button>
+      <button data-k="pass" aria-pressed="false">Passing</button>
+      <button data-k="value" aria-pressed="false" id="valueTab" hidden>Best prices</button>
+    </div>
+    <div id="hero"></div>
+    <div id="top"></div>
+  </div>
+
+  <div class="view" id="v-parlays">
+    <h3>Parlays</h3>
+    <p class="note">Two legs that help each other — if one hits, the other usually does too.</p>
+    <div id="parlays"></div>
+  </div>
+
+  <div class="view" id="v-games">
+    <h3>By game</h3>
+    <p class="note">The strongest bets in each matchup, Thursday through Monday.</p>
+    <div id="games"></div>
+  </div>
+
+  <div class="view" id="v-lines">
+    <h3>Game lines</h3>
+    <p class="note">Who wins, the projected score, and where the total lands.</p>
+    <div id="lines"></div>
+  </div>
+
+  <div class="view" id="v-how">
+    <h3>How it works</h3>
+    <div class="card">
+      <p style="margin:0 0 10px"><b>The big number</b> is the chance the bet wins. 75% hits about
+        three times in four — and still loses the fourth.</p>
+      <p style="margin:0 0 10px"><b>Order comes from the model alone:</b> how likely a bet is, and
+        how far its projection clears the number. Sportsbook odds don't affect the ranking.</p>
+      <p style="margin:0 0 10px"><b>"Worth about −150"</b> is the break-even price. If FanDuel pays
+        better than that, good deal. Worse, and you're overpaying even on a likely bet.</p>
+      <p style="margin:0 0 10px"><b>"50+ rushing yards"</b> means he goes over 50.</p>
+      <p style="margin:0 0 10px"><b>FanDuel's price</b> is shown next to the model's fair price when
+        it's available. A <b>VALUE</b> badge means FanDuel is paying more than the bet is worth —
+        those are the ones worth taking.</p>
+      <p style="margin:0 0 10px"><b>Nothing shorter than −350</b> is listed as a single bet. A −800
+        favorite risks 8 units to win 1 — fine as a parlay leg, poor on its own.</p>
+      <p style="margin:0"><b>Spreads and totals</b> are the hardest bets to beat, so the model tracks
+        FanDuel there instead of guessing. Player bets are where it has an opinion.</p>
+    </div>
+    <div class="card">
+      <p style="margin:0 0 10px"><b>Where the numbers come from.</b> Every game is simulated 20,000
+        times using play-by-play data from the last three seasons: how often each player is used,
+        how his team plays, who's hurt, who's inactive, and the weather.</p>
+      <p style="margin:0"><b>How good is it?</b> Tested on the 2024 and 2025 seasons, it beats a
+        naive guess by roughly 30% on catches and yards, and when it says 70%, those bets win about
+        70% of the time. It is not a crystal ball. Bet accordingly.</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Model estimates, not locks — and they go stale when someone gets ruled out. Check the app before
+  you bet. 21+. Only bet what you can afford to lose. If it stops being fun, call 1-800-GAMBLER.
+</footer>
+
+<script type="application/json" id="data">{"season": 2026, "week": 3, "odds": false, "generated": "2026-09-23 14:56 UTC", "games": [{"away": "ATL", "home": "GB", "kickoff": "2026-09-24 20:15 ET", "spread": "GB -5.5", "total": 43.5, "book_ml": {}, "ml_fair": {"GB": -191, "ATL": 196}, "ml_prob": {"GB": 0.657, "ATL": 0.338}, "spread_line": 5.5, "cover": {"GB": 0.475, "ATL": 0.525}, "total_probs": {"over": 0.47, "under": 0.519}, "proj_total": 44.3, "team_totals_proj": {"GB": 24.8, "ATL": 19.5}, "players": [{"name": "Drake London", "team": "ATL", "pos": "WR", "proj": {"rec": 4.2, "rec_yds": 50.7, "rush_yds": 1.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.221, "fair": 353}, {"bet": "3+ receptions", "prob": 0.755, "fair": -308}, {"bet": "4+ receptions", "prob": 0.588, "fair": -143}, {"bet": "5+ receptions", "prob": 0.428, "fair": 134}, {"bet": "40+ rec yds", "prob": 0.606, "fair": -154}, {"bet": "50+ rec yds", "prob": 0.495, "fair": 102}, {"bet": "60+ rec yds", "prob": 0.383, "fair": 161}]}, {"name": "Bijan Robinson", "team": "ATL", "pos": "RB", "proj": {"rec": 5.5, "rec_yds": 43.2, "rush_yds": 80.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.432, "fair": 132}, {"bet": "3+ receptions", "prob": 0.878, "fair": -720}, {"bet": "4+ receptions", "prob": 0.767, "fair": -329}, {"bet": "5+ receptions", "prob": 0.627, "fair": -168}, {"bet": "6+ receptions", "prob": 0.475, "fair": 111}, {"bet": "40+ rec yds", "prob": 0.537, "fair": -116}, {"bet": "50+ rec yds", "prob": 0.384, "fair": 160}, {"bet": "40+ rush yds", "prob": 0.79, "fair": -377}, {"bet": "50+ rush yds", "prob": 0.699, "fair": -232}, {"bet": "60+ rush yds", "prob": 0.587, "fair": -142}, {"bet": "75+ rush yds", "prob": 0.429, "fair": 133}]}, {"name": "Kyle Pitts", "team": "ATL", "pos": "TE", "proj": {"rec": 3.5, "rec_yds": 36.1, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.153, "fair": 555}, {"bet": "3+ receptions", "prob": 0.655, "fair": -190}, {"bet": "4+ receptions", "prob": 0.463, "fair": 116}, {"bet": "40+ rec yds", "prob": 0.414, "fair": 142}]}, {"name": "Jahan Dotson", "team": "ATL", "pos": "WR", "proj": {"rec": 1.9, "rec_yds": 22.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.091, "fair": 1003}]}, {"name": "Olamide Zaccheaus", "team": "ATL", "pos": "WR", "proj": {"rec": 1.6, "rec_yds": 16.4, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.105, "fair": 850}]}, {"name": "Brian Robinson", "team": "ATL", "pos": "RB", "proj": {"rec": 0.8, "rec_yds": 5.6, "rush_yds": 31.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.185, "fair": 441}]}, {"name": "Cooper Rush", "team": "ATL", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 7.6, "pass_yds": 230.0}, "bets": [{"bet": "200+ pass yds", "prob": 0.636, "fair": -174}, {"bet": "225+ pass yds", "prob": 0.494, "fair": 103}, {"bet": "250+ pass yds", "prob": 0.357, "fair": 180}]}, {"name": "Christian Watson", "team": "GB", "pos": "WR", "proj": {"rec": 4.1, "rec_yds": 66.1, "rush_yds": 0.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.364, "fair": 175}, {"bet": "3+ receptions", "prob": 0.75, "fair": -299}, {"bet": "4+ receptions", "prob": 0.581, "fair": -139}, {"bet": "5+ receptions", "prob": 0.409, "fair": 145}, {"bet": "40+ rec yds", "prob": 0.723, "fair": -260}, {"bet": "50+ rec yds", "prob": 0.628, "fair": -169}, {"bet": "60+ rec yds", "prob": 0.528, "fair": -112}, {"bet": "70+ rec yds", "prob": 0.444, "fair": 125}, {"bet": "80+ rec yds", "prob": 0.362, "fair": 176}]}, {"name": "Matthew Golden", "team": "GB", "pos": "WR", "proj": {"rec": 3.5, "rec_yds": 43.6, "rush_yds": 1.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.242, "fair": 313}, {"bet": "3+ receptions", "prob": 0.656, "fair": -190}, {"bet": "4+ receptions", "prob": 0.465, "fair": 115}, {"bet": "40+ rec yds", "prob": 0.517, "fair": -107}, {"bet": "50+ rec yds", "prob": 0.396, "fair": 152}]}, {"name": "Tucker Kraft", "team": "GB", "pos": "TE", "proj": {"rec": 2.9, "rec_yds": 36.0, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.204, "fair": 389}, {"bet": "3+ receptions", "prob": 0.54, "fair": -117}, {"bet": "40+ rec yds", "prob": 0.421, "fair": 137}]}, {"name": "Jayden Reed", "team": "GB", "pos": "WR", "proj": {"rec": 2.4, "rec_yds": 32.9, "rush_yds": 2.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.171, "fair": 486}, {"bet": "3+ receptions", "prob": 0.442, "fair": 126}, {"bet": "40+ rec yds", "prob": 0.359, "fair": 179}]}, {"name": "Chris Brooks", "team": "GB", "pos": "RB", "proj": {"rec": 1.2, "rec_yds": 8.5, "rush_yds": 40.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.383, "fair": 161}, {"bet": "40+ rush yds", "prob": 0.355, "fair": 182}]}], "parlays": [{"legs": ["Christian Watson 3+ receptions", "Christian Watson 40+ rec yds"], "prob": 0.6646, "fair": -198, "correlation_lift": 1.23}, {"legs": ["Bijan Robinson 40+ rush yds", "Bijan Robinson 4+ receptions"], "prob": 0.6052, "fair": -153, "correlation_lift": 1.0}, {"legs": ["Bijan Robinson 40+ rush yds", "Drake London 3+ receptions"], "prob": 0.5969, "fair": -148, "correlation_lift": 1.0}, {"legs": ["Bijan Robinson 40+ rush yds", "Christian Watson 3+ receptions"], "prob": 0.5918, "fair": -145, "correlation_lift": 1.0}, {"legs": ["Bijan Robinson 4+ receptions", "Christian Watson 3+ receptions"], "prob": 0.5728, "fair": -134, "correlation_lift": 1.0}, {"legs": ["Bijan Robinson 4+ receptions", "Drake London 3+ receptions"], "prob": 0.5721, "fair": -134, "correlation_lift": 0.99}]}, {"away": "LAC", "home": "BUF", "kickoff": "2026-09-27 13:00 ET", "spread": "BUF -7", "total": 50.5, "book_ml": {}, "ml_fair": {"BUF": -274, "LAC": 278}, "ml_prob": {"BUF": 0.733, "LAC": 0.265}, "spread_line": 7.0, "cover": {"BUF": 0.46, "LAC": 0.47}, "total_probs": {"over": 0.494, "under": 0.493}, "proj_total": 51.8, "team_totals_proj": {"BUF": 29.8, "LAC": 22.0}, "players": [{"name": "Khalil Shakir", "team": "BUF", "pos": "WR", "proj": {"rec": 3.7, "rec_yds": 41.7, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.322, "fair": 211}, {"bet": "3+ receptions", "prob": 0.695, "fair": -228}, {"bet": "4+ receptions", "prob": 0.51, "fair": -104}, {"bet": "40+ rec yds", "prob": 0.499, "fair": 101}, {"bet": "50+ rec yds", "prob": 0.368, "fair": 171}]}, {"name": "Dalton Kincaid", "team": "BUF", "pos": "TE", "proj": {"rec": 3.3, "rec_yds": 38.0, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.207, "fair": 384}, {"bet": "3+ receptions", "prob": 0.622, "fair": -165}, {"bet": "4+ receptions", "prob": 0.438, "fair": 128}, {"bet": "40+ rec yds", "prob": 0.442, "fair": 126}]}, {"name": "Keon Coleman", "team": "BUF", "pos": "WR", "proj": {"rec": 2.1, "rec_yds": 29.0, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.202, "fair": 395}, {"bet": "3+ receptions", "prob": 0.357, "fair": 180}]}, {"name": "DJ Moore", "team": "BUF", "pos": "WR", "proj": {"rec": 1.7, "rec_yds": 19.4, "rush_yds": 1.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.115, "fair": 766}]}, {"name": "Ty Johnson", "team": "BUF", "pos": "RB", "proj": {"rec": 2.0, "rec_yds": 18.5, "rush_yds": 19.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.354, "fair": 182}]}, {"name": "Dawson Knox", "team": "BUF", "pos": "TE", "proj": {"rec": 1.6, "rec_yds": 18.4, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.193, "fair": 417}]}, {"name": "Josh Palmer", "team": "BUF", "pos": "WR", "proj": {"rec": 1.3, "rec_yds": 17.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.102, "fair": 876}]}, {"name": "James Cook", "team": "BUF", "pos": "RB", "proj": {"rec": 2.0, "rec_yds": 15.3, "rush_yds": 74.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.519, "fair": -108}, {"bet": "40+ rush yds", "prob": 0.748, "fair": -298}, {"bet": "50+ rush yds", "prob": 0.636, "fair": -175}, {"bet": "60+ rush yds", "prob": 0.524, "fair": -110}, {"bet": "75+ rush yds", "prob": 0.375, "fair": 167}]}, {"name": "Josh Allen", "team": "BUF", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 40.8, "pass_yds": 220.9}, "bets": [{"bet": "anytime TD", "prob": 0.336, "fair": 197}, {"bet": "200+ pass yds", "prob": 0.587, "fair": -142}, {"bet": "225+ pass yds", "prob": 0.437, "fair": 129}]}, {"name": "Quentin Johnston", "team": "LAC", "pos": "WR", "proj": {"rec": 3.4, "rec_yds": 47.9, "rush_yds": 1.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.212, "fair": 372}, {"bet": "3+ receptions", "prob": 0.641, "fair": -178}, {"bet": "4+ receptions", "prob": 0.451, "fair": 122}, {"bet": "40+ rec yds", "prob": 0.549, "fair": -122}, {"bet": "50+ rec yds", "prob": 0.444, "fair": 125}, {"bet": "60+ rec yds", "prob": 0.355, "fair": 182}]}, {"name": "Ladd McConkey", "team": "LAC", "pos": "WR", "proj": {"rec": 3.7, "rec_yds": 45.7, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.255, "fair": 293}, {"bet": "3+ receptions", "prob": 0.689, "fair": -222}, {"bet": "4+ receptions", "prob": 0.502, "fair": -101}, {"bet": "40+ rec yds", "prob": 0.537, "fair": -116}, {"bet": "50+ rec yds", "prob": 0.422, "fair": 137}]}, {"name": "Tre Harris", "team": "LAC", "pos": "WR", "proj": {"rec": 2.6, "rec_yds": 31.5, "rush_yds": 0.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.141, "fair": 609}, {"bet": "3+ receptions", "prob": 0.492, "fair": 103}]}], "parlays": [{"legs": ["James Cook 40+ rush yds", "Khalil Shakir 3+ receptions"], "prob": 0.5141, "fair": -106, "correlation_lift": 0.99}, {"legs": ["Khalil Shakir 3+ receptions", "Khalil Shakir 40+ rec yds"], "prob": 0.4822, "fair": 107, "correlation_lift": 1.39}, {"legs": ["James Cook 40+ rush yds", "Dalton Kincaid 3+ receptions"], "prob": 0.4607, "fair": 117, "correlation_lift": 0.99}, {"legs": ["Khalil Shakir 3+ receptions", "James Cook 50+ rush yds"], "prob": 0.4351, "fair": 130, "correlation_lift": 0.98}, {"legs": ["Khalil Shakir 3+ receptions", "Dalton Kincaid 3+ receptions"], "prob": 0.4255, "fair": 135, "correlation_lift": 0.98}, {"legs": ["Khalil Shakir 4+ receptions", "Khalil Shakir 40+ rec yds"], "prob": 0.4187, "fair": 139, "correlation_lift": 1.65}]}, {"away": "CAR", "home": "CLE", "kickoff": "2026-09-27 13:00 ET", "spread": "CLE +2.5", "total": 42.5, "book_ml": {}, "ml_fair": {"CLE": 136, "CAR": -132}, "ml_prob": {"CLE": 0.424, "CAR": 0.568}, "spread_line": -2.5, "cover": {"CLE": 0.503, "CAR": 0.497}, "total_probs": {"over": 0.462, "under": 0.519}, "proj_total": 42.7, "team_totals_proj": {"CLE": 20.3, "CAR": 22.4}, "players": [{"name": "Tetairoa McMillan", "team": "CAR", "pos": "WR", "proj": {"rec": 3.5, "rec_yds": 47.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.236, "fair": 324}, {"bet": "3+ receptions", "prob": 0.68, "fair": -212}, {"bet": "4+ receptions", "prob": 0.487, "fair": 105}, {"bet": "40+ rec yds", "prob": 0.567, "fair": -131}, {"bet": "50+ rec yds", "prob": 0.452, "fair": 121}]}, {"name": "Jalen Coker", "team": "CAR", "pos": "WR", "proj": {"rec": 3.7, "rec_yds": 46.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.242, "fair": 314}, {"bet": "3+ receptions", "prob": 0.695, "fair": -227}, {"bet": "4+ receptions", "prob": 0.511, "fair": -105}, {"bet": "40+ rec yds", "prob": 0.545, "fair": -120}, {"bet": "50+ rec yds", "prob": 0.434, "fair": 130}]}, {"name": "Xavier Legette", "team": "CAR", "pos": "WR", "proj": {"rec": 1.7, "rec_yds": 18.8, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.148, "fair": 577}]}, {"name": "Ja'Tavion Sanders", "team": "CAR", "pos": "TE", "proj": {"rec": 2.0, "rec_yds": 18.5, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.163, "fair": 513}]}, {"name": "Tommy Tremble", "team": "CAR", "pos": "TE", "proj": {"rec": 1.7, "rec_yds": 17.1, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.106, "fair": 840}]}, {"name": "Chuba Hubbard", "team": "CAR", "pos": "RB", "proj": {"rec": 1.5, "rec_yds": 9.4, "rush_yds": 62.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.412, "fair": 143}, {"bet": "40+ rush yds", "prob": 0.632, "fair": -172}, {"bet": "50+ rush yds", "prob": 0.513, "fair": -105}, {"bet": "60+ rush yds", "prob": 0.397, "fair": 152}]}, {"name": "Jonathon Brooks", "team": "CAR", "pos": "RB", "proj": {"rec": 0.6, "rec_yds": 4.5, "rush_yds": 24.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.21, "fair": 376}]}, {"name": "AJ Dillon", "team": "CAR", "pos": "RB", "proj": {"rec": 0.3, "rec_yds": 2.3, "rush_yds": 23.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.119, "fair": 741}]}, {"name": "Bryce Young", "team": "CAR", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 15.0, "pass_yds": 214.6}, "bets": [{"bet": "anytime TD", "prob": 0.128, "fair": 682}, {"bet": "200+ pass yds", "prob": 0.542, "fair": -119}, {"bet": "225+ pass yds", "prob": 0.405, "fair": 147}]}, {"name": "Harold Fannin Jr.", "team": "CLE", "pos": "TE", "proj": {"rec": 3.9, "rec_yds": 38.9, "rush_yds": 0.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.19, "fair": 427}, {"bet": "3+ receptions", "prob": 0.717, "fair": -254}, {"bet": "4+ receptions", "prob": 0.545, "fair": -120}, {"bet": "5+ receptions", "prob": 0.379, "fair": 164}, {"bet": "40+ rec yds", "prob": 0.456, "fair": 119}]}, {"name": "Jerry Jeudy", "team": "CLE", "pos": "WR", "proj": {"rec": 3.0, "rec_yds": 38.2, "rush_yds": 0.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.156, "fair": 542}, {"bet": "3+ receptions", "prob": 0.568, "fair": -131}, {"bet": "4+ receptions", "prob": 0.37, "fair": 170}, {"bet": "40+ rec yds", "prob": 0.439, "fair": 128}]}, {"name": "Malachi Corley", "team": "CLE", "pos": "WR", "proj": {"rec": 2.3, "rec_yds": 26.7, "rush_yds": 12.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.306, "fair": 227}, {"bet": "3+ receptions", "prob": 0.414, "fair": 142}]}], "parlays": [{"legs": ["Tetairoa McMillan 3+ receptions", "Tetairoa McMillan 40+ rec yds"], "prob": 0.5293, "fair": -112, "correlation_lift": 1.37}, {"legs": ["Jalen Coker 3+ receptions", "Jalen Coker 40+ rec yds"], "prob": 0.5148, "fair": -106, "correlation_lift": 1.36}, {"legs": ["Jalen Coker 3+ receptions", "Tetairoa McMillan 3+ receptions"], "prob": 0.4644, "fair": 115, "correlation_lift": 0.98}, {"legs": ["Jalen Coker 40+ rec yds", "Jalen Coker 4+ receptions"], "prob": 0.447, "fair": 124, "correlation_lift": 1.6}, {"legs": ["Tetairoa McMillan 40+ rec yds", "Tetairoa McMillan 4+ receptions"], "prob": 0.4413, "fair": 127, "correlation_lift": 1.6}, {"legs": ["Jalen Coker 3+ receptions", "Chuba Hubbard 40+ rush yds"], "prob": 0.433, "fair": 131, "correlation_lift": 0.99}]}, {"away": "NYJ", "home": "DET", "kickoff": "2026-09-27 13:00 ET", "spread": "DET -6.5", "total": 47.5, "book_ml": {}, "ml_fair": {"DET": -246, "NYJ": 251}, "ml_prob": {"DET": 0.711, "NYJ": 0.285}, "spread_line": 6.5, "cover": {"DET": 0.49, "NYJ": 0.51}, "total_probs": {"over": 0.499, "under": 0.488}, "proj_total": 49.1, "team_totals_proj": {"DET": 28.1, "NYJ": 20.9}, "players": [{"name": "Amon-Ra St. Brown", "team": "DET", "pos": "WR", "proj": {"rec": 6.1, "rec_yds": 73.2, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.44, "fair": 127}, {"bet": "4+ receptions", "prob": 0.833, "fair": -499}, {"bet": "5+ receptions", "prob": 0.717, "fair": -253}, {"bet": "6+ receptions", "prob": 0.574, "fair": -134}, {"bet": "40+ rec yds", "prob": 0.813, "fair": -433}, {"bet": "50+ rec yds", "prob": 0.722, "fair": -260}, {"bet": "60+ rec yds", "prob": 0.62, "fair": -163}, {"bet": "70+ rec yds", "prob": 0.523, "fair": -110}, {"bet": "80+ rec yds", "prob": 0.435, "fair": 130}]}, {"name": "Jameson Williams", "team": "DET", "pos": "WR", "proj": {"rec": 2.9, "rec_yds": 45.6, "rush_yds": 0.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.214, "fair": 368}, {"bet": "3+ receptions", "prob": 0.548, "fair": -121}, {"bet": "4+ receptions", "prob": 0.354, "fair": 182}, {"bet": "40+ rec yds", "prob": 0.521, "fair": -109}, {"bet": "50+ rec yds", "prob": 0.414, "fair": 141}]}, {"name": "Sam LaPorta", "team": "DET", "pos": "TE", "proj": {"rec": 3.8, "rec_yds": 43.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.306, "fair": 226}, {"bet": "3+ receptions", "prob": 0.716, "fair": -252}, {"bet": "4+ receptions", "prob": 0.527, "fair": -111}, {"bet": "5+ receptions", "prob": 0.357, "fair": 180}, {"bet": "40+ rec yds", "prob": 0.522, "fair": -109}, {"bet": "50+ rec yds", "prob": 0.395, "fair": 153}]}, {"name": "Jahmyr Gibbs", "team": "DET", "pos": "RB", "proj": {"rec": 3.4, "rec_yds": 27.7, "rush_yds": 114.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.645, "fair": -181}, {"bet": "3+ receptions", "prob": 0.639, "fair": -177}, {"bet": "4+ receptions", "prob": 0.456, "fair": 119}, {"bet": "50+ rush yds", "prob": 0.893, "fair": -837}, {"bet": "60+ rush yds", "prob": 0.839, "fair": -522}, {"bet": "75+ rush yds", "prob": 0.731, "fair": -272}, {"bet": "90+ rush yds", "prob": 0.609, "fair": -156}]}, {"name": "Isaac TeSlaa", "team": "DET", "pos": "WR", "proj": {"rec": 1.4, "rec_yds": 19.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.181, "fair": 452}]}, {"name": "Jared Goff", "team": "DET", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 5.6, "pass_yds": 254.9}, "bets": [{"bet": "200+ pass yds", "prob": 0.755, "fair": -308}, {"bet": "225+ pass yds", "prob": 0.629, "fair": -170}, {"bet": "250+ pass yds", "prob": 0.492, "fair": 103}, {"bet": "275+ pass yds", "prob": 0.367, "fair": 172}]}, {"name": "Garrett Wilson", "team": "NYJ", "pos": "WR", "proj": {"rec": 3.8, "rec_yds": 44.3, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.178, "fair": 461}, {"bet": "3+ receptions", "prob": 0.714, "fair": -250}, {"bet": "4+ receptions", "prob": 0.533, "fair": -114}, {"bet": "5+ receptions", "prob": 0.36, "fair": 178}, {"bet": "40+ rec yds", "prob": 0.538, "fair": -116}, {"bet": "50+ rec yds", "prob": 0.402, "fair": 149}]}, {"name": "Adonai Mitchell", "team": "NYJ", "pos": "WR", "proj": {"rec": 2.5, "rec_yds": 33.0, "rush_yds": 0.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.182, "fair": 449}, {"bet": "3+ receptions", "prob": 0.461, "fair": 117}, {"bet": "40+ rec yds", "prob": 0.377, "fair": 165}]}, {"name": "Isaiah Williams", "team": "NYJ", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 21.4, "rush_yds": 1.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.119, "fair": 738}]}, {"name": "Mason Taylor", "team": "NYJ", "pos": "TE", "proj": {"rec": 2.1, "rec_yds": 19.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.086, "fair": 1061}, {"bet": "3+ receptions", "prob": 0.37, "fair": 170}]}, {"name": "Breece Hall", "team": "NYJ", "pos": "RB", "proj": {"rec": 1.8, "rec_yds": 15.3, "rush_yds": 60.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.319, "fair": 214}, {"bet": "40+ rush yds", "prob": 0.615, "fair": -160}, {"bet": "50+ rush yds", "prob": 0.493, "fair": 103}, {"bet": "60+ rush yds", "prob": 0.381, "fair": 162}]}, {"name": "Braelon Allen", "team": "NYJ", "pos": "RB", "proj": {"rec": 0.8, "rec_yds": 6.8, "rush_yds": 24.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.414, "fair": 142}]}], "parlays": [{"legs": ["Amon-Ra St. Brown 4+ receptions", "Amon-Ra St. Brown 40+ rec yds"], "prob": 0.7654, "fair": -326, "correlation_lift": 1.13}, {"legs": ["Amon-Ra St. Brown 4+ receptions", "Amon-Ra St. Brown 50+ rec yds"], "prob": 0.6972, "fair": -230, "correlation_lift": 1.16}, {"legs": ["Jahmyr Gibbs 60+ rush yds", "Amon-Ra St. Brown 4+ receptions"], "prob": 0.6965, "fair": -229, "correlation_lift": 1.0}, {"legs": ["Amon-Ra St. Brown 40+ rec yds", "Amon-Ra St. Brown 5+ receptions"], "prob": 0.6959, "fair": -229, "correlation_lift": 1.19}, {"legs": ["Jahmyr Gibbs 60+ rush yds", "Amon-Ra St. Brown 40+ rec yds"], "prob": 0.6812, "fair": -214, "correlation_lift": 1.0}, {"legs": ["Amon-Ra St. Brown 40+ rec yds", "Jared Goff 200+ pass yds"], "prob": 0.6716, "fair": -205, "correlation_lift": 1.09}]}, {"away": "HOU", "home": "IND", "kickoff": "2026-09-27 13:00 ET", "spread": "IND +3", "total": 42.5, "book_ml": {}, "ml_fair": {"IND": 147, "HOU": -145}, "ml_prob": {"IND": 0.404, "HOU": 0.591}, "spread_line": -3.0, "cover": {"IND": 0.453, "HOU": 0.472}, "total_probs": {"over": 0.47, "under": 0.511}, "proj_total": 42.7, "team_totals_proj": {"IND": 19.9, "HOU": 22.9}, "players": [{"name": "Nico Collins", "team": "HOU", "pos": "WR", "proj": {"rec": 3.9, "rec_yds": 58.2, "rush_yds": 1.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.302, "fair": 231}, {"bet": "3+ receptions", "prob": 0.715, "fair": -251}, {"bet": "4+ receptions", "prob": 0.551, "fair": -123}, {"bet": "5+ receptions", "prob": 0.38, "fair": 163}, {"bet": "40+ rec yds", "prob": 0.659, "fair": -193}, {"bet": "50+ rec yds", "prob": 0.558, "fair": -126}, {"bet": "60+ rec yds", "prob": 0.459, "fair": 118}, {"bet": "70+ rec yds", "prob": 0.376, "fair": 166}]}, {"name": "Dalton Schultz", "team": "HOU", "pos": "TE", "proj": {"rec": 4.8, "rec_yds": 48.5, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.207, "fair": 383}, {"bet": "3+ receptions", "prob": 0.824, "fair": -467}, {"bet": "4+ receptions", "prob": 0.684, "fair": -216}, {"bet": "5+ receptions", "prob": 0.527, "fair": -111}, {"bet": "6+ receptions", "prob": 0.39, "fair": 156}, {"bet": "40+ rec yds", "prob": 0.606, "fair": -154}, {"bet": "50+ rec yds", "prob": 0.463, "fair": 116}, {"bet": "60+ rec yds", "prob": 0.352, "fair": 184}]}, {"name": "Xavier Hutchinson", "team": "HOU", "pos": "WR", "proj": {"rec": 2.7, "rec_yds": 34.2, "rush_yds": 0.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.188, "fair": 431}, {"bet": "3+ receptions", "prob": 0.502, "fair": -101}, {"bet": "40+ rec yds", "prob": 0.387, "fair": 158}]}, {"name": "Kayshon Boutte", "team": "HOU", "pos": "WR", "proj": {"rec": 1.6, "rec_yds": 24.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.123, "fair": 712}]}, {"name": "Jaylin Noel", "team": "HOU", "pos": "WR", "proj": {"rec": 1.8, "rec_yds": 22.8, "rush_yds": 2.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.096, "fair": 942}]}, {"name": "Woody Marks", "team": "HOU", "pos": "RB", "proj": {"rec": 1.8, "rec_yds": 14.2, "rush_yds": 39.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.363, "fair": 175}, {"bet": "40+ rush yds", "prob": 0.353, "fair": 183}]}, {"name": "David Montgomery", "team": "HOU", "pos": "RB", "proj": {"rec": 1.3, "rec_yds": 10.8, "rush_yds": 40.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.348, "fair": 187}, {"bet": "40+ rush yds", "prob": 0.364, "fair": 175}]}, {"name": "British Brooks", "team": "HOU", "pos": "RB", "proj": {"rec": 0.5, "rec_yds": 4.0, "rush_yds": 24.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.157, "fair": 537}]}, {"name": "C.J. Stroud", "team": "HOU", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 15.7, "pass_yds": 271.3}, "bets": [{"bet": "anytime TD", "prob": 0.1, "fair": 898}, {"bet": "200+ pass yds", "prob": 0.803, "fair": -408}, {"bet": "225+ pass yds", "prob": 0.695, "fair": -228}, {"bet": "250+ pass yds", "prob": 0.575, "fair": -135}, {"bet": "275+ pass yds", "prob": 0.45, "fair": 122}]}, {"name": "Alec Pierce", "team": "IND", "pos": "WR", "proj": {"rec": 2.3, "rec_yds": 41.5, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.157, "fair": 536}, {"bet": "3+ receptions", "prob": 0.417, "fair": 140}, {"bet": "40+ rec yds", "prob": 0.477, "fair": 110}, {"bet": "50+ rec yds", "prob": 0.368, "fair": 172}]}, {"name": "Tyler Warren", "team": "IND", "pos": "TE", "proj": {"rec": 3.7, "rec_yds": 38.9, "rush_yds": 0.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.243, "fair": 311}, {"bet": "3+ receptions", "prob": 0.683, "fair": -216}, {"bet": "4+ receptions", "prob": 0.504, "fair": -102}, {"bet": "40+ rec yds", "prob": 0.458, "fair": 118}]}, {"name": "Josh Downs", "team": "IND", "pos": "WR", "proj": {"rec": 3.5, "rec_yds": 38.6, "rush_yds": 0.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.208, "fair": 381}, {"bet": "3+ receptions", "prob": 0.664, "fair": -198}, {"bet": "4+ receptions", "prob": 0.465, "fair": 115}, {"bet": "40+ rec yds", "prob": 0.457, "fair": 119}]}], "parlays": [{"legs": ["Nico Collins 3+ receptions", "Nico Collins 40+ rec yds"], "prob": 0.6133, "fair": -159, "correlation_lift": 1.3}, {"legs": ["Dalton Schultz 3+ receptions", "Dalton Schultz 40+ rec yds"], "prob": 0.5919, "fair": -145, "correlation_lift": 1.19}, {"legs": ["Dalton Schultz 3+ receptions", "Nico Collins 3+ receptions"], "prob": 0.5867, "fair": -142, "correlation_lift": 1.0}, {"legs": ["Dalton Schultz 4+ receptions", "Dalton Schultz 40+ rec yds"], "prob": 0.5559, "fair": -125, "correlation_lift": 1.34}, {"legs": ["Dalton Schultz 3+ receptions", "Nico Collins 40+ rec yds"], "prob": 0.5379, "fair": -116, "correlation_lift": 0.99}, {"legs": ["Nico Collins 3+ receptions", "Nico Collins 50+ rec yds"], "prob": 0.534, "fair": -115, "correlation_lift": 1.34}]}, {"away": "NE", "home": "JAX", "kickoff": "2026-09-27 13:00 ET", "spread": "JAX -3", "total": 45.5, "book_ml": {}, "ml_fair": {"JAX": -132, "NE": 133}, "ml_prob": {"JAX": 0.569, "NE": 0.429}, "spread_line": 3.0, "cover": {"JAX": 0.437, "NE": 0.481}, "total_probs": {"over": 0.49, "under": 0.497}, "proj_total": 45.9, "team_totals_proj": {"JAX": 24.3, "NE": 21.7}, "players": [{"name": "Parker Washington", "team": "JAX", "pos": "WR", "proj": {"rec": 4.1, "rec_yds": 52.5, "rush_yds": 0.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.205, "fair": 389}, {"bet": "3+ receptions", "prob": 0.747, "fair": -295}, {"bet": "4+ receptions", "prob": 0.587, "fair": -142}, {"bet": "5+ receptions", "prob": 0.414, "fair": 141}, {"bet": "40+ rec yds", "prob": 0.613, "fair": -159}, {"bet": "50+ rec yds", "prob": 0.506, "fair": -102}, {"bet": "60+ rec yds", "prob": 0.398, "fair": 151}]}, {"name": "Brian Thomas Jr.", "team": "JAX", "pos": "WR", "proj": {"rec": 3.0, "rec_yds": 39.6, "rush_yds": 0.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.146, "fair": 584}, {"bet": "3+ receptions", "prob": 0.565, "fair": -130}, {"bet": "4+ receptions", "prob": 0.372, "fair": 169}, {"bet": "40+ rec yds", "prob": 0.456, "fair": 119}]}, {"name": "Travis Hunter", "team": "JAX", "pos": "WR", "proj": {"rec": 2.5, "rec_yds": 27.8, "rush_yds": 1.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.187, "fair": 434}, {"bet": "3+ receptions", "prob": 0.45, "fair": 122}]}, {"name": "Jakobi Meyers", "team": "JAX", "pos": "WR", "proj": {"rec": 2.3, "rec_yds": 25.8, "rush_yds": 2.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.136, "fair": 635}, {"bet": "3+ receptions", "prob": 0.416, "fair": 140}]}, {"name": "Brenton Strange", "team": "JAX", "pos": "TE", "proj": {"rec": 2.5, "rec_yds": 24.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.245, "fair": 309}, {"bet": "3+ receptions", "prob": 0.445, "fair": 125}]}, {"name": "Bhayshul Tuten", "team": "JAX", "pos": "RB", "proj": {"rec": 1.0, "rec_yds": 7.1, "rush_yds": 40.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.322, "fair": 210}, {"bet": "40+ rush yds", "prob": 0.365, "fair": 174}]}, {"name": "Chris Rodriguez Jr.", "team": "JAX", "pos": "RB", "proj": {"rec": 0.4, "rec_yds": 2.9, "rush_yds": 29.9, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.372, "fair": 169}]}, {"name": "Trevor Lawrence", "team": "JAX", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 14.9, "pass_yds": 223.5}, "bets": [{"bet": "anytime TD", "prob": 0.133, "fair": 650}, {"bet": "200+ pass yds", "prob": 0.583, "fair": -140}, {"bet": "225+ pass yds", "prob": 0.448, "fair": 123}]}, {"name": "Mack Hollins", "team": "NE", "pos": "WR", "proj": {"rec": 3.7, "rec_yds": 45.7, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.211, "fair": 375}, {"bet": "3+ receptions", "prob": 0.697, "fair": -230}, {"bet": "4+ receptions", "prob": 0.518, "fair": -108}, {"bet": "40+ rec yds", "prob": 0.543, "fair": -119}, {"bet": "50+ rec yds", "prob": 0.426, "fair": 135}]}, {"name": "Hunter Henry", "team": "NE", "pos": "TE", "proj": {"rec": 3.9, "rec_yds": 43.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.343, "fair": 192}, {"bet": "3+ receptions", "prob": 0.712, "fair": -247}, {"bet": "4+ receptions", "prob": 0.536, "fair": -116}, {"bet": "5+ receptions", "prob": 0.378, "fair": 164}, {"bet": "40+ rec yds", "prob": 0.526, "fair": -111}, {"bet": "50+ rec yds", "prob": 0.403, "fair": 148}]}, {"name": "DeMario Douglas", "team": "NE", "pos": "WR", "proj": {"rec": 3.0, "rec_yds": 34.3, "rush_yds": 0.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.122, "fair": 722}, {"bet": "3+ receptions", "prob": 0.571, "fair": -133}, {"bet": "4+ receptions", "prob": 0.382, "fair": 162}, {"bet": "40+ rec yds", "prob": 0.383, "fair": 161}]}, {"name": "Rhamondre Stevenson", "team": "NE", "pos": "RB", "proj": {"rec": 3.4, "rec_yds": 26.2, "rush_yds": 41.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.363, "fair": 176}, {"bet": "3+ receptions", "prob": 0.639, "fair": -177}, {"bet": "4+ receptions", "prob": 0.456, "fair": 119}, {"bet": "40+ rush yds", "prob": 0.37, "fair": 170}]}], "parlays": [{"legs": ["Parker Washington 3+ receptions", "Parker Washington 40+ rec yds"], "prob": 0.5838, "fair": -140, "correlation_lift": 1.27}, {"legs": ["Parker Washington 40+ rec yds", "Parker Washington 4+ receptions"], "prob": 0.5244, "fair": -110, "correlation_lift": 1.46}, {"legs": ["Parker Washington 3+ receptions", "Parker Washington 50+ rec yds"], "prob": 0.4911, "fair": 104, "correlation_lift": 1.3}, {"legs": ["Parker Washington 3+ receptions", "Trevor Lawrence 200+ pass yds"], "prob": 0.4738, "fair": 111, "correlation_lift": 1.09}, {"legs": ["Parker Washington 4+ receptions", "Parker Washington 50+ rec yds"], "prob": 0.457, "fair": 119, "correlation_lift": 1.54}, {"legs": ["Parker Washington 40+ rec yds", "Trevor Lawrence 200+ pass yds"], "prob": 0.4406, "fair": 127, "correlation_lift": 1.23}]}, {"away": "KC", "home": "MIA", "kickoff": "2026-09-27 13:00 ET", "spread": "MIA +11.5", "total": 46.5, "book_ml": {}, "ml_fair": {"MIA": 401, "KC": -375}, "ml_prob": {"MIA": 0.2, "KC": 0.79}, "spread_line": -11.5, "cover": {"MIA": 0.577, "KC": 0.423}, "total_probs": {"over": 0.501, "under": 0.483}, "proj_total": 47.1, "team_totals_proj": {"MIA": 18.0, "KC": 29.1}, "players": [{"name": "Rashee Rice", "team": "KC", "pos": "WR", "proj": {"rec": 3.6, "rec_yds": 42.3, "rush_yds": 0.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.33, "fair": 203}, {"bet": "3+ receptions", "prob": 0.678, "fair": -211}, {"bet": "4+ receptions", "prob": 0.495, "fair": 102}, {"bet": "40+ rec yds", "prob": 0.505, "fair": -102}, {"bet": "50+ rec yds", "prob": 0.377, "fair": 165}]}, {"name": "Travis Kelce", "team": "KC", "pos": "TE", "proj": {"rec": 4.2, "rec_yds": 40.5, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.247, "fair": 304}, {"bet": "3+ receptions", "prob": 0.767, "fair": -329}, {"bet": "4+ receptions", "prob": 0.599, "fair": -150}, {"bet": "5+ receptions", "prob": 0.432, "fair": 132}, {"bet": "40+ rec yds", "prob": 0.493, "fair": 103}, {"bet": "50+ rec yds", "prob": 0.363, "fair": 175}]}, {"name": "Xavier Worthy", "team": "KC", "pos": "WR", "proj": {"rec": 3.0, "rec_yds": 35.9, "rush_yds": 1.9, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.3, "fair": 234}, {"bet": "3+ receptions", "prob": 0.57, "fair": -133}, {"bet": "4+ receptions", "prob": 0.377, "fair": 165}, {"bet": "40+ rec yds", "prob": 0.414, "fair": 142}]}, {"name": "Tyquan Thornton", "team": "KC", "pos": "WR", "proj": {"rec": 1.4, "rec_yds": 20.5, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.097, "fair": 934}]}, {"name": "Kenneth Walker III", "team": "KC", "pos": "RB", "proj": {"rec": 2.7, "rec_yds": 20.0, "rush_yds": 38.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.433, "fair": 131}, {"bet": "3+ receptions", "prob": 0.494, "fair": 103}]}, {"name": "Brashard Smith", "team": "KC", "pos": "RB", "proj": {"rec": 2.0, "rec_yds": 13.9, "rush_yds": 26.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.36, "fair": 177}]}, {"name": "Patrick Mahomes", "team": "KC", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.2, "rush_yds": 24.3, "pass_yds": 241.5}, "bets": [{"bet": "anytime TD", "prob": 0.147, "fair": 582}, {"bet": "200+ pass yds", "prob": 0.707, "fair": -242}, {"bet": "225+ pass yds", "prob": 0.573, "fair": -134}, {"bet": "250+ pass yds", "prob": 0.425, "fair": 135}]}, {"name": "Malik Washington", "team": "MIA", "pos": "WR", "proj": {"rec": 4.7, "rec_yds": 43.5, "rush_yds": 2.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.223, "fair": 347}, {"bet": "3+ receptions", "prob": 0.816, "fair": -442}, {"bet": "4+ receptions", "prob": 0.671, "fair": -204}, {"bet": "5+ receptions", "prob": 0.505, "fair": -102}, {"bet": "6+ receptions", "prob": 0.357, "fair": 180}, {"bet": "40+ rec yds", "prob": 0.53, "fair": -113}, {"bet": "50+ rec yds", "prob": 0.394, "fair": 153}]}, {"name": "De'Von Achane", "team": "MIA", "pos": "RB", "proj": {"rec": 5.4, "rec_yds": 37.6, "rush_yds": 68.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.369, "fair": 171}, {"bet": "3+ receptions", "prob": 0.875, "fair": -701}, {"bet": "4+ receptions", "prob": 0.753, "fair": -305}, {"bet": "5+ receptions", "prob": 0.617, "fair": -161}, {"bet": "6+ receptions", "prob": 0.474, "fair": 111}, {"bet": "40+ rec yds", "prob": 0.441, "fair": 127}, {"bet": "40+ rush yds", "prob": 0.702, "fair": -236}, {"bet": "50+ rush yds", "prob": 0.585, "fair": -141}, {"bet": "60+ rush yds", "prob": 0.467, "fair": 114}]}, {"name": "Greg Dulcich", "team": "MIA", "pos": "TE", "proj": {"rec": 3.1, "rec_yds": 30.9, "rush_yds": 0.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.258, "fair": 288}, {"bet": "3+ receptions", "prob": 0.583, "fair": -140}, {"bet": "4+ receptions", "prob": 0.394, "fair": 154}]}, {"name": "Caleb Douglas", "team": "MIA", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 24.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.196, "fair": 411}]}, {"name": "Jaylen Wright", "team": "MIA", "pos": "RB", "proj": {"rec": 0.8, "rec_yds": 5.6, "rush_yds": 17.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.189, "fair": 429}]}], "parlays": [{"legs": ["Malik Washington 3+ receptions", "Travis Kelce 3+ receptions"], "prob": 0.626, "fair": -167, "correlation_lift": 1.0}, {"legs": ["Malik Washington 3+ receptions", "Patrick Mahomes 200+ pass yds"], "prob": 0.5747, "fair": -135, "correlation_lift": 1.0}, {"legs": ["Travis Kelce 3+ receptions", "Patrick Mahomes 200+ pass yds"], "prob": 0.5639, "fair": -129, "correlation_lift": 1.04}, {"legs": ["Malik Washington 3+ receptions", "Rashee Rice 3+ receptions"], "prob": 0.5548, "fair": -125, "correlation_lift": 1.0}, {"legs": ["Travis Kelce 3+ receptions", "Malik Washington 4+ receptions"], "prob": 0.5136, "fair": -106, "correlation_lift": 1.0}, {"legs": ["Travis Kelce 3+ receptions", "Rashee Rice 3+ receptions"], "prob": 0.5132, "fair": -105, "correlation_lift": 0.99}]}, {"away": "TEN", "home": "NYG", "kickoff": "2026-09-27 13:00 ET", "spread": "NYG -2.5", "total": 39.5, "book_ml": {}, "ml_fair": {"NYG": -126, "TEN": 132}, "ml_prob": {"NYG": 0.557, "TEN": 0.432}, "spread_line": 2.5, "cover": {"NYG": 0.487, "TEN": 0.513}, "total_probs": {"over": 0.494, "under": 0.495}, "proj_total": 40.3, "team_totals_proj": {"NYG": 21.1, "TEN": 19.1}, "players": [{"name": "Malik Nabers", "team": "NYG", "pos": "WR", "proj": {"rec": 3.3, "rec_yds": 41.5, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.291, "fair": 244}, {"bet": "3+ receptions", "prob": 0.632, "fair": -172}, {"bet": "4+ receptions", "prob": 0.44, "fair": 127}, {"bet": "40+ rec yds", "prob": 0.486, "fair": 106}, {"bet": "50+ rec yds", "prob": 0.371, "fair": 170}]}, {"name": "Isaiah Likely", "team": "NYG", "pos": "TE", "proj": {"rec": 3.5, "rec_yds": 37.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.181, "fair": 451}, {"bet": "3+ receptions", "prob": 0.654, "fair": -189}, {"bet": "4+ receptions", "prob": 0.463, "fair": 116}, {"bet": "40+ rec yds", "prob": 0.436, "fair": 129}]}, {"name": "Theo Johnson", "team": "NYG", "pos": "TE", "proj": {"rec": 2.9, "rec_yds": 32.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.195, "fair": 412}, {"bet": "3+ receptions", "prob": 0.552, "fair": -123}, {"bet": "4+ receptions", "prob": 0.362, "fair": 176}, {"bet": "40+ rec yds", "prob": 0.368, "fair": 172}]}, {"name": "Darnell Mooney", "team": "NYG", "pos": "WR", "proj": {"rec": 1.5, "rec_yds": 21.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.09, "fair": 1014}]}, {"name": "Tyrone Tracy Jr.", "team": "NYG", "pos": "RB", "proj": {"rec": 2.2, "rec_yds": 16.7, "rush_yds": 41.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.268, "fair": 274}, {"bet": "3+ receptions", "prob": 0.394, "fair": 154}, {"bet": "40+ rush yds", "prob": 0.377, "fair": 165}]}, {"name": "Cam Skattebo", "team": "NYG", "pos": "RB", "proj": {"rec": 1.7, "rec_yds": 13.2, "rush_yds": 37.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.322, "fair": 210}]}, {"name": "Devin Singletary", "team": "NYG", "pos": "RB", "proj": {"rec": 1.5, "rec_yds": 10.5, "rush_yds": 18.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.208, "fair": 380}]}, {"name": "Jaxson Dart", "team": "NYG", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 36.8, "pass_yds": 219.0}, "bets": [{"bet": "anytime TD", "prob": 0.095, "fair": 949}, {"bet": "200+ pass yds", "prob": 0.573, "fair": -134}, {"bet": "225+ pass yds", "prob": 0.43, "fair": 133}]}, {"name": "Chimere Dike", "team": "TEN", "pos": "WR", "proj": {"rec": 2.8, "rec_yds": 30.1, "rush_yds": 3.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.18, "fair": 455}, {"bet": "3+ receptions", "prob": 0.531, "fair": -113}]}, {"name": "Elic Ayomanor", "team": "TEN", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 25.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.24, "fair": 316}]}, {"name": "Gunnar Helm", "team": "TEN", "pos": "TE", "proj": {"rec": 2.4, "rec_yds": 21.7, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.176, "fair": 467}, {"bet": "3+ receptions", "prob": 0.436, "fair": 130}]}], "parlays": [{"legs": ["Malik Nabers 3+ receptions", "Malik Nabers 40+ rec yds"], "prob": 0.4481, "fair": 123, "correlation_lift": 1.46}, {"legs": ["Isaiah Likely 3+ receptions", "Malik Nabers 3+ receptions"], "prob": 0.4107, "fair": 143, "correlation_lift": 0.99}, {"legs": ["Isaiah Likely 3+ receptions", "Jaxson Dart 200+ pass yds"], "prob": 0.4093, "fair": 144, "correlation_lift": 1.09}, {"legs": ["Malik Nabers 3+ receptions", "Jaxson Dart 200+ pass yds"], "prob": 0.3928, "fair": 155, "correlation_lift": 1.08}, {"legs": ["Isaiah Likely 3+ receptions", "Theo Johnson 3+ receptions"], "prob": 0.3547, "fair": 182, "correlation_lift": 0.98}, {"legs": ["Jaxson Dart 200+ pass yds", "Malik Nabers 40+ rec yds"], "prob": 0.3541, "fair": 182, "correlation_lift": 1.27}]}, {"away": "CIN", "home": "PIT", "kickoff": "2026-09-27 13:00 ET", "spread": "PIT +3.5", "total": 42.5, "book_ml": {}, "ml_fair": {"PIT": 161, "CIN": -154}, "ml_prob": {"PIT": 0.384, "CIN": 0.607}, "spread_line": -3.5, "cover": {"PIT": 0.502, "CIN": 0.498}, "total_probs": {"over": 0.485, "under": 0.496}, "proj_total": 43.2, "team_totals_proj": {"PIT": 19.9, "CIN": 23.3}, "players": [{"name": "Ja'Marr Chase", "team": "CIN", "pos": "WR", "proj": {"rec": 5.6, "rec_yds": 71.1, "rush_yds": 0.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.429, "fair": 133}, {"bet": "3+ receptions", "prob": 0.887, "fair": -784}, {"bet": "4+ receptions", "prob": 0.775, "fair": -344}, {"bet": "5+ receptions", "prob": 0.642, "fair": -180}, {"bet": "6+ receptions", "prob": 0.493, "fair": 103}, {"bet": "40+ rec yds", "prob": 0.783, "fair": -360}, {"bet": "50+ rec yds", "prob": 0.682, "fair": -214}, {"bet": "60+ rec yds", "prob": 0.595, "fair": -147}, {"bet": "70+ rec yds", "prob": 0.494, "fair": 102}, {"bet": "80+ rec yds", "prob": 0.402, "fair": 149}]}, {"name": "Tee Higgins", "team": "CIN", "pos": "WR", "proj": {"rec": 4.4, "rec_yds": 59.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.255, "fair": 293}, {"bet": "3+ receptions", "prob": 0.78, "fair": -355}, {"bet": "4+ receptions", "prob": 0.629, "fair": -170}, {"bet": "5+ receptions", "prob": 0.459, "fair": 118}, {"bet": "40+ rec yds", "prob": 0.683, "fair": -216}, {"bet": "50+ rec yds", "prob": 0.573, "fair": -134}, {"bet": "60+ rec yds", "prob": 0.47, "fair": 113}, {"bet": "70+ rec yds", "prob": 0.382, "fair": 162}]}, {"name": "Chase Brown", "team": "CIN", "pos": "RB", "proj": {"rec": 3.7, "rec_yds": 25.5, "rush_yds": 65.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.434, "fair": 130}, {"bet": "3+ receptions", "prob": 0.682, "fair": -214}, {"bet": "4+ receptions", "prob": 0.5, "fair": 100}, {"bet": "40+ rush yds", "prob": 0.673, "fair": -206}, {"bet": "50+ rush yds", "prob": 0.551, "fair": -123}, {"bet": "60+ rush yds", "prob": 0.43, "fair": 132}]}, {"name": "Mike Gesicki", "team": "CIN", "pos": "TE", "proj": {"rec": 2.3, "rec_yds": 24.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.184, "fair": 442}, {"bet": "3+ receptions", "prob": 0.407, "fair": 146}]}, {"name": "Andrei Iosivas", "team": "CIN", "pos": "WR", "proj": {"rec": 1.7, "rec_yds": 22.3, "rush_yds": 0.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.14, "fair": 614}]}, {"name": "Samaje Perine", "team": "CIN", "pos": "RB", "proj": {"rec": 1.6, "rec_yds": 12.8, "rush_yds": 24.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.235, "fair": 326}]}, {"name": "Joe Burrow", "team": "CIN", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 8.7, "pass_yds": 273.0}, "bets": [{"bet": "200+ pass yds", "prob": 0.81, "fair": -426}, {"bet": "225+ pass yds", "prob": 0.699, "fair": -232}, {"bet": "250+ pass yds", "prob": 0.575, "fair": -135}, {"bet": "275+ pass yds", "prob": 0.458, "fair": 118}]}, {"name": "DK Metcalf", "team": "PIT", "pos": "WR", "proj": {"rec": 4.7, "rec_yds": 68.3, "rush_yds": 0.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.198, "fair": 404}, {"bet": "3+ receptions", "prob": 0.82, "fair": -455}, {"bet": "4+ receptions", "prob": 0.674, "fair": -206}, {"bet": "5+ receptions", "prob": 0.507, "fair": -103}, {"bet": "40+ rec yds", "prob": 0.745, "fair": -291}, {"bet": "50+ rec yds", "prob": 0.653, "fair": -188}, {"bet": "60+ rec yds", "prob": 0.553, "fair": -124}, {"bet": "70+ rec yds", "prob": 0.465, "fair": 115}, {"bet": "80+ rec yds", "prob": 0.378, "fair": 165}]}, {"name": "Pat Freiermuth", "team": "PIT", "pos": "TE", "proj": {"rec": 3.2, "rec_yds": 34.1, "rush_yds": 1.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.2, "fair": 399}, {"bet": "3+ receptions", "prob": 0.603, "fair": -152}, {"bet": "4+ receptions", "prob": 0.42, "fair": 138}, {"bet": "40+ rec yds", "prob": 0.388, "fair": 158}]}, {"name": "Roman Wilson", "team": "PIT", "pos": "WR", "proj": {"rec": 2.4, "rec_yds": 30.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.1, "fair": 903}, {"bet": "3+ receptions", "prob": 0.443, "fair": 125}]}, {"name": "Jaylen Warren", "team": "PIT", "pos": "RB", "proj": {"rec": 2.9, "rec_yds": 24.0, "rush_yds": 88.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.451, "fair": 122}, {"bet": "3+ receptions", "prob": 0.555, "fair": -125}, {"bet": "4+ receptions", "prob": 0.361, "fair": 177}, {"bet": "40+ rush yds", "prob": 0.803, "fair": -408}, {"bet": "50+ rush yds", "prob": 0.725, "fair": -263}, {"bet": "60+ rush yds", "prob": 0.632, "fair": -172}, {"bet": "75+ rush yds", "prob": 0.489, "fair": 104}, {"bet": "90+ rush yds", "prob": 0.365, "fair": 174}]}, {"name": "Darnell Washington", "team": "PIT", "pos": "TE", "proj": {"rec": 2.1, "rec_yds": 22.4, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.095, "fair": 955}, {"bet": "3+ receptions", "prob": 0.358, "fair": 179}]}], "parlays": [{"legs": ["Ja'Marr Chase 40+ rec yds", "Ja'Marr Chase 4+ receptions"], "prob": 0.7184, "fair": -255, "correlation_lift": 1.18}, {"legs": ["DK Metcalf 3+ receptions", "DK Metcalf 40+ rec yds"], "prob": 0.7113, "fair": -246, "correlation_lift": 1.17}, {"legs": ["Joe Burrow 200+ pass yds", "Ja'Marr Chase 40+ rec yds"], "prob": 0.6834, "fair": -216, "correlation_lift": 1.08}, {"legs": ["DK Metcalf 3+ receptions", "Joe Burrow 200+ pass yds"], "prob": 0.6634, "fair": -197, "correlation_lift": 1.0}, {"legs": ["Joe Burrow 200+ pass yds", "Ja'Marr Chase 4+ receptions"], "prob": 0.6539, "fair": -189, "correlation_lift": 1.04}, {"legs": ["Tee Higgins 3+ receptions", "Tee Higgins 40+ rec yds"], "prob": 0.6507, "fair": -186, "correlation_lift": 1.22}]}, {"away": "SEA", "home": "WAS", "kickoff": "2026-09-27 13:00 ET", "spread": "WAS +7", "total": 40.5, "book_ml": {}, "ml_fair": {"WAS": 327, "SEA": -313}, "ml_prob": {"WAS": 0.234, "SEA": 0.758}, "spread_line": -7.0, "cover": {"WAS": 0.479, "SEA": 0.471}, "total_probs": {"over": 0.457, "under": 0.518}, "proj_total": 41.1, "team_totals_proj": {"WAS": 16.1, "SEA": 25.0}, "players": [{"name": "Jaxon Smith-Njigba", "team": "SEA", "pos": "WR", "proj": {"rec": 6.7, "rec_yds": 96.1, "rush_yds": 1.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.404, "fair": 147}, {"bet": "4+ receptions", "prob": 0.879, "fair": -723}, {"bet": "5+ receptions", "prob": 0.779, "fair": -352}, {"bet": "6+ receptions", "prob": 0.65, "fair": -185}, {"bet": "40+ rec yds", "prob": 0.892, "fair": -825}, {"bet": "50+ rec yds", "prob": 0.839, "fair": -522}, {"bet": "60+ rec yds", "prob": 0.772, "fair": -338}, {"bet": "70+ rec yds", "prob": 0.698, "fair": -232}, {"bet": "80+ rec yds", "prob": 0.618, "fair": -162}]}, {"name": "Rashid Shaheed", "team": "SEA", "pos": "WR", "proj": {"rec": 2.3, "rec_yds": 32.1, "rush_yds": 2.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.137, "fair": 628}, {"bet": "3+ receptions", "prob": 0.413, "fair": 142}, {"bet": "40+ rec yds", "prob": 0.362, "fair": 176}]}, {"name": "Cooper Kupp", "team": "SEA", "pos": "WR", "proj": {"rec": 2.4, "rec_yds": 30.1, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.211, "fair": 374}, {"bet": "3+ receptions", "prob": 0.427, "fair": 134}]}, {"name": "AJ Barner", "team": "SEA", "pos": "TE", "proj": {"rec": 2.2, "rec_yds": 22.2, "rush_yds": 1.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.189, "fair": 428}, {"bet": "3+ receptions", "prob": 0.387, "fair": 158}]}, {"name": "Jadarian Price", "team": "SEA", "pos": "RB", "proj": {"rec": 1.1, "rec_yds": 8.9, "rush_yds": 29.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.209, "fair": 380}]}, {"name": "George Holani", "team": "SEA", "pos": "RB", "proj": {"rec": 0.8, "rec_yds": 6.6, "rush_yds": 29.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.271, "fair": 269}]}, {"name": "Emanuel Wilson", "team": "SEA", "pos": "RB", "proj": {"rec": 0.7, "rec_yds": 5.1, "rush_yds": 38.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.338, "fair": 196}]}, {"name": "Drew Lock", "team": "SEA", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 6.3, "pass_yds": 254.4}, "bets": [{"bet": "200+ pass yds", "prob": 0.744, "fair": -290}, {"bet": "225+ pass yds", "prob": 0.612, "fair": -158}, {"bet": "250+ pass yds", "prob": 0.487, "fair": 105}, {"bet": "275+ pass yds", "prob": 0.365, "fair": 174}]}, {"name": "Terry McLaurin", "team": "WAS", "pos": "WR", "proj": {"rec": 3.4, "rec_yds": 44.0, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.146, "fair": 583}, {"bet": "3+ receptions", "prob": 0.646, "fair": -182}, {"bet": "4+ receptions", "prob": 0.456, "fair": 119}, {"bet": "40+ rec yds", "prob": 0.513, "fair": -105}, {"bet": "50+ rec yds", "prob": 0.403, "fair": 148}]}, {"name": "Stefon Diggs", "team": "WAS", "pos": "WR", "proj": {"rec": 2.9, "rec_yds": 31.4, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.14, "fair": 615}, {"bet": "3+ receptions", "prob": 0.549, "fair": -122}, {"bet": "4+ receptions", "prob": 0.361, "fair": 177}, {"bet": "40+ rec yds", "prob": 0.352, "fair": 184}]}, {"name": "Treylon Burks", "team": "WAS", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 23.0, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.171, "fair": 486}]}, {"name": "Luke McCaffrey", "team": "WAS", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 22.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.089, "fair": 1026}]}], "parlays": [{"legs": ["Jaxon Smith-Njigba 50+ rec yds", "Jaxon Smith-Njigba 5+ receptions"], "prob": 0.7514, "fair": -302, "correlation_lift": 1.15}, {"legs": ["Jaxon Smith-Njigba 5+ receptions", "Jaxon Smith-Njigba 60+ rec yds"], "prob": 0.7098, "fair": -245, "correlation_lift": 1.18}, {"legs": ["Jaxon Smith-Njigba 50+ rec yds", "Drew Lock 200+ pass yds"], "prob": 0.6857, "fair": -218, "correlation_lift": 1.1}, {"legs": ["Jaxon Smith-Njigba 5+ receptions", "Jaxon Smith-Njigba 70+ rec yds"], "prob": 0.6588, "fair": -193, "correlation_lift": 1.21}, {"legs": ["Jaxon Smith-Njigba 60+ rec yds", "Drew Lock 200+ pass yds"], "prob": 0.6512, "fair": -187, "correlation_lift": 1.13}, {"legs": ["Jaxon Smith-Njigba 50+ rec yds", "Jaxon Smith-Njigba 6+ receptions"], "prob": 0.6496, "fair": -185, "correlation_lift": 1.19}]}, {"away": "ARI", "home": "SF", "kickoff": "2026-09-27 16:05 ET", "spread": "SF -8.5", "total": 47.5, "book_ml": {}, "ml_fair": {"SF": -318, "ARI": 325}, "ml_prob": {"SF": 0.761, "ARI": 0.235}, "spread_line": 8.5, "cover": {"SF": 0.477, "ARI": 0.523}, "total_probs": {"over": 0.487, "under": 0.503}, "proj_total": 48.1, "team_totals_proj": {"SF": 28.7, "ARI": 19.4}, "players": [{"name": "Trey McBride", "team": "ARI", "pos": "TE", "proj": {"rec": 7.5, "rec_yds": 73.2, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.447, "fair": 124}, {"bet": "5+ receptions", "prob": 0.841, "fair": -528}, {"bet": "6+ receptions", "prob": 0.735, "fair": -277}, {"bet": "40+ rec yds", "prob": 0.837, "fair": -512}, {"bet": "50+ rec yds", "prob": 0.745, "fair": -292}, {"bet": "60+ rec yds", "prob": 0.637, "fair": -175}, {"bet": "70+ rec yds", "prob": 0.526, "fair": -111}, {"bet": "80+ rec yds", "prob": 0.423, "fair": 136}]}, {"name": "Michael Wilson", "team": "ARI", "pos": "WR", "proj": {"rec": 4.6, "rec_yds": 55.4, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.192, "fair": 422}, {"bet": "3+ receptions", "prob": 0.81, "fair": -425}, {"bet": "4+ receptions", "prob": 0.659, "fair": -194}, {"bet": "5+ receptions", "prob": 0.501, "fair": -100}, {"bet": "6+ receptions", "prob": 0.35, "fair": 185}, {"bet": "40+ rec yds", "prob": 0.653, "fair": -188}, {"bet": "50+ rec yds", "prob": 0.547, "fair": -121}, {"bet": "60+ rec yds", "prob": 0.428, "fair": 134}]}, {"name": "Marvin Harrison Jr.", "team": "ARI", "pos": "WR", "proj": {"rec": 2.2, "rec_yds": 31.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.118, "fair": 748}, {"bet": "3+ receptions", "prob": 0.389, "fair": 157}]}, {"name": "Kendrick Bourne", "team": "ARI", "pos": "WR", "proj": {"rec": 2.1, "rec_yds": 26.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.091, "fair": 1003}, {"bet": "3+ receptions", "prob": 0.376, "fair": 166}]}, {"name": "Jeremiyah Love", "team": "ARI", "pos": "RB", "proj": {"rec": 1.6, "rec_yds": 10.8, "rush_yds": 26.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.241, "fair": 315}]}, {"name": "Tyler Allgeier", "team": "ARI", "pos": "RB", "proj": {"rec": 1.3, "rec_yds": 9.2, "rush_yds": 37.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.231, "fair": 332}]}, {"name": "Bam Knight", "team": "ARI", "pos": "RB", "proj": {"rec": 1.0, "rec_yds": 7.2, "rush_yds": 27.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.208, "fair": 382}]}, {"name": "Jacoby Brissett", "team": "ARI", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 13.6, "pass_yds": 253.4}, "bets": [{"bet": "anytime TD", "prob": 0.141, "fair": 610}, {"bet": "200+ pass yds", "prob": 0.731, "fair": -272}, {"bet": "225+ pass yds", "prob": 0.61, "fair": -156}, {"bet": "250+ pass yds", "prob": 0.472, "fair": 112}, {"bet": "275+ pass yds", "prob": 0.362, "fair": 176}]}, {"name": "George Kittle", "team": "SF", "pos": "TE", "proj": {"rec": 7.1, "rec_yds": 87.3, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.412, "fair": 143}, {"bet": "4+ receptions", "prob": 0.898, "fair": -882}, {"bet": "5+ receptions", "prob": 0.806, "fair": -416}, {"bet": "6+ receptions", "prob": 0.69, "fair": -222}, {"bet": "40+ rec yds", "prob": 0.883, "fair": -752}, {"bet": "50+ rec yds", "prob": 0.811, "fair": -428}, {"bet": "60+ rec yds", "prob": 0.735, "fair": -277}, {"bet": "70+ rec yds", "prob": 0.651, "fair": -186}, {"bet": "80+ rec yds", "prob": 0.565, "fair": -130}]}, {"name": "Christian McCaffrey", "team": "SF", "pos": "RB", "proj": {"rec": 4.3, "rec_yds": 36.8, "rush_yds": 62.9, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.667, "fair": -200}, {"bet": "3+ receptions", "prob": 0.768, "fair": -332}, {"bet": "4+ receptions", "prob": 0.61, "fair": -156}, {"bet": "5+ receptions", "prob": 0.441, "fair": 127}, {"bet": "40+ rec yds", "prob": 0.441, "fair": 127}, {"bet": "40+ rush yds", "prob": 0.644, "fair": -181}, {"bet": "50+ rush yds", "prob": 0.524, "fair": -110}, {"bet": "60+ rush yds", "prob": 0.406, "fair": 146}]}, {"name": "Mike Evans", "team": "SF", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 24.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.188, "fair": 431}]}, {"name": "Deebo Samuel Sr.", "team": "SF", "pos": "WR", "proj": {"rec": 2.1, "rec_yds": 24.7, "rush_yds": 2.9, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.184, "fair": 444}, {"bet": "3+ receptions", "prob": 0.369, "fair": 171}]}], "parlays": [{"legs": ["Trey McBride 5+ receptions", "Trey McBride 40+ rec yds"], "prob": 0.781, "fair": -357, "correlation_lift": 1.11}, {"legs": ["Trey McBride 40+ rec yds", "Trey McBride 6+ receptions"], "prob": 0.7139, "fair": -250, "correlation_lift": 1.16}, {"legs": ["Trey McBride 5+ receptions", "Trey McBride 50+ rec yds"], "prob": 0.7123, "fair": -248, "correlation_lift": 1.14}, {"legs": ["Trey McBride 5+ receptions", "Michael Wilson 3+ receptions"], "prob": 0.6755, "fair": -208, "correlation_lift": 0.99}, {"legs": ["Trey McBride 40+ rec yds", "Michael Wilson 3+ receptions"], "prob": 0.672, "fair": -205, "correlation_lift": 0.99}, {"legs": ["Trey McBride 50+ rec yds", "Trey McBride 6+ receptions"], "prob": 0.6665, "fair": -200, "correlation_lift": 1.22}]}, {"away": "MIN", "home": "TB", "kickoff": "2026-09-27 16:05 ET", "spread": "TB +1.5", "total": 42.5, "book_ml": {}, "ml_fair": {"TB": 132, "MIN": -131}, "ml_prob": {"TB": 0.43, "MIN": 0.566}, "spread_line": -1.5, "cover": {"TB": 0.451, "MIN": 0.549}, "total_probs": {"over": 0.495, "under": 0.489}, "proj_total": 43.0, "team_totals_proj": {"TB": 20.9, "MIN": 22.2}, "players": [{"name": "Justin Jefferson", "team": "MIN", "pos": "WR", "proj": {"rec": 5.1, "rec_yds": 69.2, "rush_yds": 0.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.405, "fair": 147}, {"bet": "3+ receptions", "prob": 0.861, "fair": -622}, {"bet": "4+ receptions", "prob": 0.726, "fair": -265}, {"bet": "5+ receptions", "prob": 0.57, "fair": -133}, {"bet": "6+ receptions", "prob": 0.423, "fair": 136}, {"bet": "40+ rec yds", "prob": 0.765, "fair": -325}, {"bet": "50+ rec yds", "prob": 0.672, "fair": -204}, {"bet": "60+ rec yds", "prob": 0.578, "fair": -137}, {"bet": "70+ rec yds", "prob": 0.479, "fair": 109}, {"bet": "80+ rec yds", "prob": 0.391, "fair": 156}]}, {"name": "Jordan Addison", "team": "MIN", "pos": "WR", "proj": {"rec": 2.6, "rec_yds": 35.8, "rush_yds": 0.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.195, "fair": 412}, {"bet": "3+ receptions", "prob": 0.487, "fair": 105}, {"bet": "40+ rec yds", "prob": 0.401, "fair": 149}]}, {"name": "T.J. Hockenson", "team": "MIN", "pos": "TE", "proj": {"rec": 3.4, "rec_yds": 32.1, "rush_yds": 0.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.214, "fair": 368}, {"bet": "3+ receptions", "prob": 0.626, "fair": -167}, {"bet": "4+ receptions", "prob": 0.443, "fair": 125}]}, {"name": "Jauan Jennings", "team": "MIN", "pos": "WR", "proj": {"rec": 2.4, "rec_yds": 29.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.199, "fair": 402}, {"bet": "3+ receptions", "prob": 0.429, "fair": 133}]}, {"name": "Josh Oliver", "team": "MIN", "pos": "TE", "proj": {"rec": 1.8, "rec_yds": 19.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.096, "fair": 946}]}, {"name": "Aaron Jones", "team": "MIN", "pos": "RB", "proj": {"rec": 1.9, "rec_yds": 14.2, "rush_yds": 57.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.397, "fair": 152}, {"bet": "40+ rush yds", "prob": 0.595, "fair": -147}, {"bet": "50+ rush yds", "prob": 0.465, "fair": 115}]}, {"name": "Carson Wentz", "team": "MIN", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 7.6, "pass_yds": 232.8}, "bets": [{"bet": "200+ pass yds", "prob": 0.639, "fair": -177}, {"bet": "225+ pass yds", "prob": 0.507, "fair": -103}, {"bet": "250+ pass yds", "prob": 0.381, "fair": 162}]}, {"name": "Emeka Egbuka", "team": "TB", "pos": "WR", "proj": {"rec": 2.6, "rec_yds": 35.4, "rush_yds": 1.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.184, "fair": 444}, {"bet": "3+ receptions", "prob": 0.472, "fair": 112}, {"bet": "40+ rec yds", "prob": 0.398, "fair": 151}]}, {"name": "Chris Godwin Jr.", "team": "TB", "pos": "WR", "proj": {"rec": 2.7, "rec_yds": 32.6, "rush_yds": 2.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.147, "fair": 579}, {"bet": "3+ receptions", "prob": 0.497, "fair": 101}, {"bet": "40+ rec yds", "prob": 0.361, "fair": 177}]}, {"name": "Cade Otton", "team": "TB", "pos": "TE", "proj": {"rec": 3.1, "rec_yds": 32.0, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.234, "fair": 328}, {"bet": "3+ receptions", "prob": 0.584, "fair": -141}, {"bet": "4+ receptions", "prob": 0.4, "fair": 150}]}, {"name": "Jalen McMillan", "team": "TB", "pos": "WR", "proj": {"rec": 2.0, "rec_yds": 26.5, "rush_yds": 1.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.12, "fair": 734}]}, {"name": "Bucky Irving", "team": "TB", "pos": "RB", "proj": {"rec": 2.8, "rec_yds": 23.1, "rush_yds": 63.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.368, "fair": 172}, {"bet": "3+ receptions", "prob": 0.525, "fair": -111}, {"bet": "40+ rush yds", "prob": 0.651, "fair": -186}, {"bet": "50+ rush yds", "prob": 0.526, "fair": -111}, {"bet": "60+ rush yds", "prob": 0.41, "fair": 144}]}], "parlays": [{"legs": ["Justin Jefferson 40+ rec yds", "Justin Jefferson 4+ receptions"], "prob": 0.6825, "fair": -215, "correlation_lift": 1.23}, {"legs": ["Justin Jefferson 4+ receptions", "Justin Jefferson 50+ rec yds"], "prob": 0.6209, "fair": -164, "correlation_lift": 1.27}, {"legs": ["Justin Jefferson 40+ rec yds", "Justin Jefferson 5+ receptions"], "prob": 0.5703, "fair": -133, "correlation_lift": 1.31}, {"legs": ["Justin Jefferson 40+ rec yds", "Carson Wentz 200+ pass yds"], "prob": 0.5657, "fair": -130, "correlation_lift": 1.16}, {"legs": ["Justin Jefferson 4+ receptions", "Justin Jefferson 60+ rec yds"], "prob": 0.5467, "fair": -121, "correlation_lift": 1.3}, {"legs": ["Justin Jefferson 50+ rec yds", "Justin Jefferson 5+ receptions"], "prob": 0.5403, "fair": -118, "correlation_lift": 1.41}]}, {"away": "BAL", "home": "DAL", "kickoff": "2026-09-27 16:25 ET", "spread": "DAL +3.5", "total": 52.5, "book_ml": {}, "ml_fair": {"DAL": 161, "BAL": -154}, "ml_prob": {"DAL": 0.384, "BAL": 0.607}, "spread_line": -3.5, "cover": {"DAL": 0.502, "BAL": 0.498}, "total_probs": {"over": 0.485, "under": 0.496}, "proj_total": 53.1, "team_totals_proj": {"DAL": 24.9, "BAL": 28.3}, "players": [{"name": "Zay Flowers", "team": "BAL", "pos": "WR", "proj": {"rec": 6.2, "rec_yds": 86.6, "rush_yds": 1.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.398, "fair": 151}, {"bet": "4+ receptions", "prob": 0.838, "fair": -518}, {"bet": "5+ receptions", "prob": 0.727, "fair": -266}, {"bet": "6+ receptions", "prob": 0.592, "fair": -145}, {"bet": "40+ rec yds", "prob": 0.87, "fair": -672}, {"bet": "50+ rec yds", "prob": 0.795, "fair": -387}, {"bet": "60+ rec yds", "prob": 0.716, "fair": -252}, {"bet": "70+ rec yds", "prob": 0.631, "fair": -171}, {"bet": "80+ rec yds", "prob": 0.549, "fair": -122}]}, {"name": "Mark Andrews", "team": "BAL", "pos": "TE", "proj": {"rec": 3.3, "rec_yds": 34.3, "rush_yds": 0.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.264, "fair": 280}, {"bet": "3+ receptions", "prob": 0.62, "fair": -163}, {"bet": "4+ receptions", "prob": 0.428, "fair": 134}, {"bet": "40+ rec yds", "prob": 0.392, "fair": 155}]}, {"name": "Rashod Bateman", "team": "BAL", "pos": "WR", "proj": {"rec": 1.9, "rec_yds": 26.7, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.265, "fair": 278}]}, {"name": "Justice Hill", "team": "BAL", "pos": "RB", "proj": {"rec": 1.4, "rec_yds": 11.6, "rush_yds": 19.6, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.205, "fair": 389}]}, {"name": "Derrick Henry", "team": "BAL", "pos": "RB", "proj": {"rec": 1.1, "rec_yds": 9.1, "rush_yds": 103.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.574, "fair": -135}, {"bet": "40+ rush yds", "prob": 0.894, "fair": -842}, {"bet": "50+ rush yds", "prob": 0.838, "fair": -518}, {"bet": "60+ rush yds", "prob": 0.764, "fair": -323}, {"bet": "75+ rush yds", "prob": 0.633, "fair": -172}, {"bet": "90+ rush yds", "prob": 0.499, "fair": 100}]}, {"name": "Lamar Jackson", "team": "BAL", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 31.1, "pass_yds": 232.8}, "bets": [{"bet": "anytime TD", "prob": 0.132, "fair": 660}, {"bet": "200+ pass yds", "prob": 0.65, "fair": -186}, {"bet": "225+ pass yds", "prob": 0.507, "fair": -103}, {"bet": "250+ pass yds", "prob": 0.378, "fair": 165}]}, {"name": "George Pickens", "team": "DAL", "pos": "WR", "proj": {"rec": 4.2, "rec_yds": 59.9, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.271, "fair": 270}, {"bet": "3+ receptions", "prob": 0.762, "fair": -320}, {"bet": "4+ receptions", "prob": 0.594, "fair": -146}, {"bet": "5+ receptions", "prob": 0.43, "fair": 133}, {"bet": "40+ rec yds", "prob": 0.68, "fair": -212}, {"bet": "50+ rec yds", "prob": 0.58, "fair": -138}, {"bet": "60+ rec yds", "prob": 0.483, "fair": 107}, {"bet": "70+ rec yds", "prob": 0.388, "fair": 158}]}, {"name": "CeeDee Lamb", "team": "DAL", "pos": "WR", "proj": {"rec": 4.8, "rec_yds": 58.0, "rush_yds": 1.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.344, "fair": 191}, {"bet": "3+ receptions", "prob": 0.824, "fair": -468}, {"bet": "4+ receptions", "prob": 0.686, "fair": -219}, {"bet": "5+ receptions", "prob": 0.525, "fair": -110}, {"bet": "6+ receptions", "prob": 0.381, "fair": 162}, {"bet": "40+ rec yds", "prob": 0.688, "fair": -220}, {"bet": "50+ rec yds", "prob": 0.576, "fair": -136}, {"bet": "60+ rec yds", "prob": 0.464, "fair": 116}, {"bet": "70+ rec yds", "prob": 0.374, "fair": 167}]}, {"name": "Ryan Flournoy", "team": "DAL", "pos": "WR", "proj": {"rec": 3.2, "rec_yds": 37.9, "rush_yds": 0.3, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.156, "fair": 542}, {"bet": "3+ receptions", "prob": 0.604, "fair": -153}, {"bet": "4+ receptions", "prob": 0.415, "fair": 141}, {"bet": "40+ rec yds", "prob": 0.445, "fair": 124}]}, {"name": "Jake Ferguson", "team": "DAL", "pos": "TE", "proj": {"rec": 2.8, "rec_yds": 23.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.29, "fair": 245}, {"bet": "3+ receptions", "prob": 0.52, "fair": -109}]}, {"name": "Javonte Williams", "team": "DAL", "pos": "RB", "proj": {"rec": 2.5, "rec_yds": 15.1, "rush_yds": 62.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.542, "fair": -118}, {"bet": "3+ receptions", "prob": 0.457, "fair": 119}, {"bet": "40+ rush yds", "prob": 0.643, "fair": -180}, {"bet": "50+ rush yds", "prob": 0.519, "fair": -108}, {"bet": "60+ rush yds", "prob": 0.409, "fair": 145}]}, {"name": "Emari Demercado", "team": "DAL", "pos": "RB", "proj": {"rec": 0.6, "rec_yds": 4.5, "rush_yds": 29.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.137, "fair": 632}]}], "parlays": [{"legs": ["Zay Flowers 4+ receptions", "Zay Flowers 50+ rec yds"], "prob": 0.7554, "fair": -309, "correlation_lift": 1.13}, {"legs": ["Zay Flowers 4+ receptions", "Derrick Henry 50+ rush yds"], "prob": 0.6984, "fair": -232, "correlation_lift": 0.99}, {"legs": ["Zay Flowers 50+ rec yds", "Zay Flowers 5+ receptions"], "prob": 0.6961, "fair": -229, "correlation_lift": 1.21}, {"legs": ["Derrick Henry 50+ rush yds", "CeeDee Lamb 3+ receptions"], "prob": 0.6915, "fair": -224, "correlation_lift": 1.0}, {"legs": ["Zay Flowers 4+ receptions", "Zay Flowers 60+ rec yds"], "prob": 0.6904, "fair": -223, "correlation_lift": 1.15}, {"legs": ["Zay Flowers 4+ receptions", "CeeDee Lamb 3+ receptions"], "prob": 0.6894, "fair": -222, "correlation_lift": 1.0}]}, {"away": "LV", "home": "NO", "kickoff": "2026-09-27 16:25 ET", "spread": "NO -3", "total": 44.5, "book_ml": {}, "ml_fair": {"NO": -132, "LV": 133}, "ml_prob": {"NO": 0.569, "LV": 0.429}, "spread_line": 3.0, "cover": {"NO": 0.437, "LV": 0.481}, "total_probs": {"over": 0.49, "under": 0.496}, "proj_total": 45.0, "team_totals_proj": {"NO": 23.8, "LV": 21.2}, "players": [{"name": "Brock Bowers", "team": "LV", "pos": "TE", "proj": {"rec": 7.5, "rec_yds": 76.4, "rush_yds": 0.8, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.483, "fair": 107}, {"bet": "5+ receptions", "prob": 0.842, "fair": -532}, {"bet": "6+ receptions", "prob": 0.737, "fair": -281}, {"bet": "40+ rec yds", "prob": 0.854, "fair": -584}, {"bet": "50+ rec yds", "prob": 0.769, "fair": -334}, {"bet": "60+ rec yds", "prob": 0.666, "fair": -199}, {"bet": "70+ rec yds", "prob": 0.561, "fair": -128}, {"bet": "80+ rec yds", "prob": 0.461, "fair": 117}]}, {"name": "Tre Tucker", "team": "LV", "pos": "WR", "proj": {"rec": 2.5, "rec_yds": 29.1, "rush_yds": 2.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.152, "fair": 556}, {"bet": "3+ receptions", "prob": 0.459, "fair": 118}]}, {"name": "Michael Mayer", "team": "LV", "pos": "TE", "proj": {"rec": 2.4, "rec_yds": 21.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.155, "fair": 545}, {"bet": "3+ receptions", "prob": 0.436, "fair": 129}]}, {"name": "Ashton Jeanty", "team": "LV", "pos": "RB", "proj": {"rec": 3.0, "rec_yds": 20.1, "rush_yds": 76.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.442, "fair": 126}, {"bet": "3+ receptions", "prob": 0.568, "fair": -132}, {"bet": "4+ receptions", "prob": 0.386, "fair": 159}, {"bet": "40+ rush yds", "prob": 0.773, "fair": -341}, {"bet": "50+ rush yds", "prob": 0.668, "fair": -201}, {"bet": "60+ rush yds", "prob": 0.553, "fair": -124}, {"bet": "75+ rush yds", "prob": 0.394, "fair": 154}]}, {"name": "Jalen Nailor", "team": "LV", "pos": "WR", "proj": {"rec": 1.4, "rec_yds": 18.7, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.129, "fair": 678}]}, {"name": "Jack Bech", "team": "LV", "pos": "WR", "proj": {"rec": 1.5, "rec_yds": 17.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.114, "fair": 777}]}, {"name": "Kirk Cousins", "team": "LV", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.0, "rush_yds": 2.7, "pass_yds": 218.6}, "bets": [{"bet": "200+ pass yds", "prob": 0.581, "fair": -138}, {"bet": "225+ pass yds", "prob": 0.436, "fair": 129}]}, {"name": "Chris Olave", "team": "NO", "pos": "WR", "proj": {"rec": 4.8, "rec_yds": 55.1, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.265, "fair": 278}, {"bet": "3+ receptions", "prob": 0.829, "fair": -485}, {"bet": "4+ receptions", "prob": 0.686, "fair": -218}, {"bet": "5+ receptions", "prob": 0.52, "fair": -108}, {"bet": "6+ receptions", "prob": 0.369, "fair": 171}, {"bet": "40+ rec yds", "prob": 0.659, "fair": -194}, {"bet": "50+ rec yds", "prob": 0.547, "fair": -121}, {"bet": "60+ rec yds", "prob": 0.438, "fair": 128}]}, {"name": "Alvin Kamara", "team": "NO", "pos": "RB", "proj": {"rec": 5.6, "rec_yds": 38.6, "rush_yds": 61.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.477, "fair": 110}, {"bet": "3+ receptions", "prob": 0.886, "fair": -778}, {"bet": "4+ receptions", "prob": 0.78, "fair": -354}, {"bet": "5+ receptions", "prob": 0.63, "fair": -171}, {"bet": "6+ receptions", "prob": 0.486, "fair": 106}, {"bet": "40+ rec yds", "prob": 0.468, "fair": 114}, {"bet": "40+ rush yds", "prob": 0.633, "fair": -172}, {"bet": "50+ rush yds", "prob": 0.509, "fair": -104}, {"bet": "60+ rush yds", "prob": 0.39, "fair": 157}]}, {"name": "Devaughn Vele", "team": "NO", "pos": "WR", "proj": {"rec": 2.9, "rec_yds": 35.0, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.24, "fair": 317}, {"bet": "3+ receptions", "prob": 0.539, "fair": -117}, {"bet": "4+ receptions", "prob": 0.351, "fair": 185}, {"bet": "40+ rec yds", "prob": 0.407, "fair": 146}]}, {"name": "Juwan Johnson", "team": "NO", "pos": "TE", "proj": {"rec": 2.9, "rec_yds": 30.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.249, "fair": 301}, {"bet": "3+ receptions", "prob": 0.537, "fair": -116}]}, {"name": "Kevin Austin Jr.", "team": "NO", "pos": "WR", "proj": {"rec": 2.2, "rec_yds": 27.8, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.172, "fair": 480}, {"bet": "3+ receptions", "prob": 0.398, "fair": 151}]}], "parlays": [{"legs": ["Brock Bowers 5+ receptions", "Brock Bowers 50+ rec yds"], "prob": 0.7366, "fair": -280, "correlation_lift": 1.14}, {"legs": ["Brock Bowers 5+ receptions", "Chris Olave 3+ receptions"], "prob": 0.696, "fair": -229, "correlation_lift": 1.0}, {"legs": ["Brock Bowers 50+ rec yds", "Brock Bowers 6+ receptions"], "prob": 0.6829, "fair": -215, "correlation_lift": 1.2}, {"legs": ["Brock Bowers 5+ receptions", "Brock Bowers 60+ rec yds"], "prob": 0.6478, "fair": -184, "correlation_lift": 1.16}, {"legs": ["Brock Bowers 5+ receptions", "Ashton Jeanty 40+ rush yds"], "prob": 0.6473, "fair": -184, "correlation_lift": 0.99}, {"legs": ["Chris Olave 3+ receptions", "Ashton Jeanty 40+ rush yds"], "prob": 0.6418, "fair": -179, "correlation_lift": 1.0}]}, {"away": "LA", "home": "DEN", "kickoff": "2026-09-27 20:20 ET", "spread": "DEN +2.5", "total": 45.5, "book_ml": {}, "ml_fair": {"DEN": 136, "LA": -132}, "ml_prob": {"DEN": 0.424, "LA": 0.568}, "spread_line": -2.5, "cover": {"DEN": 0.503, "LA": 0.497}, "total_probs": {"over": 0.462, "under": 0.519}, "proj_total": 45.7, "team_totals_proj": {"DEN": 21.8, "LA": 23.9}, "players": [{"name": "Courtland Sutton", "team": "DEN", "pos": "WR", "proj": {"rec": 2.8, "rec_yds": 36.1, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.241, "fair": 315}, {"bet": "3+ receptions", "prob": 0.529, "fair": -112}, {"bet": "40+ rec yds", "prob": 0.413, "fair": 142}]}, {"name": "Jaylen Waddle", "team": "DEN", "pos": "WR", "proj": {"rec": 2.8, "rec_yds": 36.0, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.137, "fair": 629}, {"bet": "3+ receptions", "prob": 0.522, "fair": -109}, {"bet": "40+ rec yds", "prob": 0.403, "fair": 148}]}, {"name": "Pat Bryant", "team": "DEN", "pos": "WR", "proj": {"rec": 2.2, "rec_yds": 26.7, "rush_yds": 0.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.119, "fair": 738}, {"bet": "3+ receptions", "prob": 0.387, "fair": 158}]}, {"name": "Evan Engram", "team": "DEN", "pos": "TE", "proj": {"rec": 2.2, "rec_yds": 19.3, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.164, "fair": 510}, {"bet": "3+ receptions", "prob": 0.388, "fair": 158}]}, {"name": "Troy Franklin", "team": "DEN", "pos": "WR", "proj": {"rec": 1.7, "rec_yds": 18.9, "rush_yds": 1.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.151, "fair": 564}]}, {"name": "RJ Harvey", "team": "DEN", "pos": "RB", "proj": {"rec": 2.5, "rec_yds": 17.9, "rush_yds": 24.9, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.301, "fair": 232}, {"bet": "3+ receptions", "prob": 0.447, "fair": 124}]}, {"name": "Marvin Mims Jr.", "team": "DEN", "pos": "WR", "proj": {"rec": 1.5, "rec_yds": 17.0, "rush_yds": 1.5, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.083, "fair": 1108}]}, {"name": "J.K. Dobbins", "team": "DEN", "pos": "RB", "proj": {"rec": 0.7, "rec_yds": 4.2, "rush_yds": 56.7, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.312, "fair": 221}, {"bet": "40+ rush yds", "prob": 0.565, "fair": -130}, {"bet": "50+ rush yds", "prob": 0.436, "fair": 129}]}, {"name": "Bo Nix", "team": "DEN", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.1, "rush_yds": 15.9, "pass_yds": 240.9}, "bets": [{"bet": "anytime TD", "prob": 0.081, "fair": 1131}, {"bet": "200+ pass yds", "prob": 0.685, "fair": -218}, {"bet": "225+ pass yds", "prob": 0.559, "fair": -127}, {"bet": "250+ pass yds", "prob": 0.422, "fair": 137}]}, {"name": "Puka Nacua", "team": "LA", "pos": "WR", "proj": {"rec": 4.8, "rec_yds": 59.8, "rush_yds": 2.2, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.295, "fair": 239}, {"bet": "3+ receptions", "prob": 0.818, "fair": -449}, {"bet": "4+ receptions", "prob": 0.681, "fair": -214}, {"bet": "5+ receptions", "prob": 0.53, "fair": -113}, {"bet": "6+ receptions", "prob": 0.377, "fair": 165}, {"bet": "40+ rec yds", "prob": 0.701, "fair": -235}, {"bet": "50+ rec yds", "prob": 0.595, "fair": -147}, {"bet": "60+ rec yds", "prob": 0.484, "fair": 107}, {"bet": "70+ rec yds", "prob": 0.389, "fair": 157}]}, {"name": "Davante Adams", "team": "LA", "pos": "WR", "proj": {"rec": 3.4, "rec_yds": 41.0, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.263, "fair": 280}, {"bet": "3+ receptions", "prob": 0.626, "fair": -167}, {"bet": "4+ receptions", "prob": 0.442, "fair": 126}, {"bet": "40+ rec yds", "prob": 0.478, "fair": 109}, {"bet": "50+ rec yds", "prob": 0.369, "fair": 171}]}, {"name": "Terrance Ferguson", "team": "LA", "pos": "TE", "proj": {"rec": 1.6, "rec_yds": 18.7, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.129, "fair": 677}]}], "parlays": [{"legs": ["J.K. Dobbins 40+ rush yds", "Jaylen Waddle 3+ receptions"], "prob": 0.2934, "fair": 241, "correlation_lift": 0.99}, {"legs": ["J.K. Dobbins 40+ rush yds", "Courtland Sutton 3+ receptions"], "prob": 0.2897, "fair": 245, "correlation_lift": 0.97}, {"legs": ["Courtland Sutton 3+ receptions", "Jaylen Waddle 3+ receptions"], "prob": 0.2701, "fair": 270, "correlation_lift": 0.98}, {"legs": ["J.K. Dobbins 40+ rush yds", "Courtland Sutton 3+ receptions", "Jaylen Waddle 3+ receptions"], "prob": 0.1453, "fair": 588, "correlation_lift": 0.93}]}, {"away": "PHI", "home": "CHI", "kickoff": "2026-09-28 20:15 ET", "spread": "CHI +4.5", "total": 41.5, "book_ml": {}, "ml_fair": {"CHI": 190, "PHI": -184}, "ml_prob": {"CHI": 0.345, "PHI": 0.647}, "spread_line": -4.5, "cover": {"CHI": 0.494, "PHI": 0.506}, "total_probs": {"over": 0.496, "under": 0.49}, "proj_total": 42.1, "team_totals_proj": {"CHI": 18.7, "PHI": 23.4}, "players": [{"name": "Luther Burden III", "team": "CHI", "pos": "WR", "proj": {"rec": 3.3, "rec_yds": 43.3, "rush_yds": 2.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.137, "fair": 628}, {"bet": "3+ receptions", "prob": 0.63, "fair": -170}, {"bet": "4+ receptions", "prob": 0.448, "fair": 123}, {"bet": "40+ rec yds", "prob": 0.506, "fair": -103}, {"bet": "50+ rec yds", "prob": 0.391, "fair": 156}]}, {"name": "Kalif Raymond", "team": "CHI", "pos": "WR", "proj": {"rec": 3.1, "rec_yds": 36.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.151, "fair": 564}, {"bet": "3+ receptions", "prob": 0.592, "fair": -145}, {"bet": "4+ receptions", "prob": 0.389, "fair": 157}, {"bet": "40+ rec yds", "prob": 0.425, "fair": 136}]}, {"name": "Rome Odunze", "team": "CHI", "pos": "WR", "proj": {"rec": 2.6, "rec_yds": 34.4, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.16, "fair": 525}, {"bet": "3+ receptions", "prob": 0.484, "fair": 106}, {"bet": "40+ rec yds", "prob": 0.387, "fair": 158}]}, {"name": "Colston Loveland", "team": "CHI", "pos": "TE", "proj": {"rec": 2.6, "rec_yds": 29.2, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.201, "fair": 398}, {"bet": "3+ receptions", "prob": 0.483, "fair": 107}]}, {"name": "D'Andre Swift", "team": "CHI", "pos": "RB", "proj": {"rec": 1.9, "rec_yds": 15.6, "rush_yds": 61.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.381, "fair": 163}, {"bet": "40+ rush yds", "prob": 0.618, "fair": -161}, {"bet": "50+ rush yds", "prob": 0.497, "fair": 101}, {"bet": "60+ rush yds", "prob": 0.377, "fair": 165}]}, {"name": "Kyle Monangai", "team": "CHI", "pos": "RB", "proj": {"rec": 1.4, "rec_yds": 10.0, "rush_yds": 46.4, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.321, "fair": 212}, {"bet": "40+ rush yds", "prob": 0.424, "fair": 136}]}, {"name": "Caleb Williams", "team": "CHI", "pos": "QB", "proj": {"rec": 0.0, "rec_yds": 0.1, "rush_yds": 33.0, "pass_yds": 217.4}, "bets": [{"bet": "anytime TD", "prob": 0.107, "fair": 833}, {"bet": "200+ pass yds", "prob": 0.563, "fair": -129}, {"bet": "225+ pass yds", "prob": 0.417, "fair": 140}]}, {"name": "DeVonta Smith", "team": "PHI", "pos": "WR", "proj": {"rec": 5.7, "rec_yds": 78.2, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.305, "fair": 227}, {"bet": "3+ receptions", "prob": 0.888, "fair": -796}, {"bet": "4+ receptions", "prob": 0.775, "fair": -344}, {"bet": "5+ receptions", "prob": 0.647, "fair": -183}, {"bet": "6+ receptions", "prob": 0.504, "fair": -102}, {"bet": "40+ rec yds", "prob": 0.81, "fair": -426}, {"bet": "50+ rec yds", "prob": 0.732, "fair": -273}, {"bet": "60+ rec yds", "prob": 0.645, "fair": -182}, {"bet": "70+ rec yds", "prob": 0.562, "fair": -128}, {"bet": "80+ rec yds", "prob": 0.483, "fair": 107}]}, {"name": "Dallas Goedert", "team": "PHI", "pos": "TE", "proj": {"rec": 4.0, "rec_yds": 42.6, "rush_yds": 0.0, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.333, "fair": 200}, {"bet": "3+ receptions", "prob": 0.725, "fair": -264}, {"bet": "4+ receptions", "prob": 0.558, "fair": -126}, {"bet": "5+ receptions", "prob": 0.386, "fair": 159}, {"bet": "40+ rec yds", "prob": 0.515, "fair": -106}, {"bet": "50+ rec yds", "prob": 0.395, "fair": 153}]}, {"name": "Dontayvion Wicks", "team": "PHI", "pos": "WR", "proj": {"rec": 2.1, "rec_yds": 26.4, "rush_yds": 0.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.243, "fair": 311}, {"bet": "3+ receptions", "prob": 0.373, "fair": 168}]}, {"name": "Saquon Barkley", "team": "PHI", "pos": "RB", "proj": {"rec": 2.2, "rec_yds": 17.7, "rush_yds": 82.1, "pass_yds": 0.0}, "bets": [{"bet": "anytime TD", "prob": 0.43, "fair": 132}, {"bet": "3+ receptions", "prob": 0.386, "fair": 159}, {"bet": "40+ rush yds", "prob": 0.784, "fair": -364}, {"bet": "50+ rush yds", "prob": 0.691, "fair": -223}, {"bet": "60+ rush yds", "prob": 0.595, "fair": -147}, {"bet": "75+ rush yds", "prob": 0.445, "fair": 125}]}], "parlays": [{"legs": ["DeVonta Smith 40+ rec yds", "DeVonta Smith 4+ receptions"], "prob": 0.74, "fair": -285, "correlation_lift": 1.18}, {"legs": ["DeVonta Smith 4+ receptions", "DeVonta Smith 50+ rec yds"], "prob": 0.6914, "fair": -224, "correlation_lift": 1.22}, {"legs": ["DeVonta Smith 40+ rec yds", "DeVonta Smith 5+ receptions"], "prob": 0.6456, "fair": -182, "correlation_lift": 1.23}, {"legs": ["DeVonta Smith 4+ receptions", "DeVonta Smith 60+ rec yds"], "prob": 0.6177, "fair": -162, "correlation_lift": 1.24}, {"legs": ["DeVonta Smith 50+ rec yds", "DeVonta Smith 5+ receptions"], "prob": 0.6148, "fair": -160, "correlation_lift": 1.3}, {"legs": ["DeVonta Smith 5+ receptions", "DeVonta Smith 60+ rec yds"], "prob": 0.5661, "fair": -130, "correlation_lift": 1.36}]}]}</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const TEAMS = {ARI:"Cardinals",ATL:"Falcons",BAL:"Ravens",BUF:"Bills",CAR:"Panthers",CHI:"Bears",CIN:"Bengals",CLE:"Browns",DAL:"Cowboys",DEN:"Broncos",DET:"Lions",GB:"Packers",HOU:"Texans",IND:"Colts",JAX:"Jaguars",KC:"Chiefs",LV:"Raiders",LAC:"Chargers",LA:"Rams",MIA:"Dolphins",MIN:"Vikings",NE:"Patriots",NO:"Saints",NYG:"Giants",NYJ:"Jets",PHI:"Eagles",PIT:"Steelers",SF:"49ers",SEA:"Seahawks",TB:"Buccaneers",TEN:"Titans",WAS:"Commanders"};
+const COLORS = {ARI:"#97233F",ATL:"#A71930",BAL:"#241773",BUF:"#00338D",CAR:"#0085CA",CHI:"#0B162A",
+CIN:"#FB4F14",CLE:"#FF3C00",DAL:"#041E42",DEN:"#FB4F14",DET:"#0076B6",GB:"#203731",HOU:"#03202F",
+IND:"#002C5F",JAX:"#006778",KC:"#E31837",LV:"#A5ACAF",LAC:"#0080C6",LA:"#003594",MIA:"#008E97",
+MIN:"#4F2683",NE:"#002244",NO:"#D3BC8D",NYG:"#0B2265",NYJ:"#125740",PHI:"#004C54",PIT:"#FFB612",
+SF:"#AA0000",SEA:"#002244",TB:"#D50A0A",TEN:"#4B92DB",WAS:"#5A1414"};
+const teamOf = x => x.team || (x.gameCode || "@").split("@")[1];
+const pct = p => Math.round(p*100) + "%";
+const odds = n => (n>0?"+":"") + n;
+const kindOf = b => b.includes("TD") ? "TD" : b.includes("receptions") ? "catches"
+                  : b.includes("rec yds") ? "rec" : b.includes("rush") ? "rush" : "pass";
+const nice = b => b.replace("rec yds","receiving yards").replace("rush yds","rushing yards")
+                   .replace("pass yds","passing yards").replace("receptions","catches");
+const STATKEY = {catches:"rec", rec:"rec_yds", rush:"rush_yds", pass:"pass_yds"};
+const dayOf = k => new Date(k.split(" ")[0]+"T12:00:00").toLocaleDateString("en-US",{weekday:"short"});
+const dayFull = {Thu:"Thursday night", Mon:"Monday night", Sun:"Sunday"};
+const band = p => p >= .7 ? "s-hi" : p >= .5 ? "s-mid" : "s-lo";
+const label = p => p >= .78 ? "Strong" : p >= .62 ? "Solid" : p >= .45 ? "Toss-up" : "Longshot";
+
+/* how strongly the model likes a bet: chance to win + how far the projection clears the number */
+function conviction(bet, proj){
+  const k = kindOf(bet.bet);
+  if (k === "TD") return bet.prob * 1.25;
+  const line = parseFloat(bet.bet), p = proj[STATKEY[k]];
+  if (!isFinite(line) || !p || line <= 0) return bet.prob;
+  return bet.prob * (1 + 0.45 * Math.max(0, Math.min((p - line) / line, 1)));
+}
+let ALL = [];
+DATA.games.forEach(g => g.players.forEach(p => p.bets.forEach(b =>
+  ALL.push({...b, who:p.name, team:p.team, proj:p.proj, score:conviction(b, p.proj),
+            game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, gameCode:`${g.away}@${g.home}`, kick:g.kickoff}))));
+const PRICE_FLOOR = -350;              // a single shorter than this risks too much to win too little
+const CHALK = ALL.filter(x => x.fair < PRICE_FLOOR).length;
+ALL = ALL.filter(x => x.fair >= PRICE_FLOOR);
+ALL.sort((a,b) => b.score - a.score);
+const PAR = [];
+DATA.games.forEach(g => g.parlays.forEach(p =>
+  PAR.push({...p, game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, gameCode:`${g.away}@${g.home}`, kick:g.kickoff})));
+PAR.sort((a,b) => b.prob - a.prob);
+document.getElementById("wk").textContent = `Week ${DATA.week} · ${DATA.games.length} games`;
+
+function projLine(p){
+  if (!p || !p.bet) return "";
+  const k = kindOf(p.bet), key = STATKEY[k];
+  if (k === "TD" || !p.proj || !p.proj[key]) return "";
+  return `model has him at <b>${p.proj[key]}${k === "catches" ? " catches" : " yards"}</b>`;
+}
+function cardHTML(p, showGame = true){
+  const cls = band(p.prob), col = COLORS[teamOf(p)] || "var(--pen)";
+  const priced = p.book !== undefined
+    ? `FanDuel <b>${odds(p.book)}</b> · worth <b>${odds(p.fair)}</b>`
+    : `worth about <b>${odds(p.fair)}</b>`;
+  const why = [showGame ? p.game : "", projLine(p), priced].filter(Boolean);
+  if (p.value) why.unshift(`<span class="pill val">VALUE +${Math.round(p.ev*100)}%</span>`);
+  return `<div class="card" style="--team:${col}"><div class="top">
+      <div class="bet">${p.who} — ${nice(p.bet)}</div>
+      <div class="big ${cls}">${pct(p.prob)}</div></div>
+    <div class="meter ${cls}"><i style="--w:${Math.round(p.prob*100)}%"></i></div>
+    <div class="why"><span class="pill ${cls}">${label(p.prob)}</span>${why.map(w => `<span>${w}</span>`).join("")}</div></div>`;
+}
+function parlayHTML(p){
+  const cls = band(p.prob), col = COLORS[teamOf(p)] || "var(--pen)";
+  return `<div class="card" style="--team:${col}"><div class="top">
+      <div class="bet">${p.legs.map(nice).join("<br>")}</div>
+      <div class="big ${cls}">${pct(p.prob)}</div></div>
+    <div class="meter ${cls}"><i style="--w:${Math.round(p.prob*100)}%"></i></div>
+    <div class="why"><span class="pill ${cls}">${label(p.prob)}</span><span>${p.game}</span>
+      <span>both legs · worth about <b>${odds(p.fair)}</b></span></div></div>`;
+}
+function bestPerPlayer(list){
+  const seen = new Set();
+  return list.filter(x => { const k = x.who + "|" + kindOf(x.bet);
+    if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
+function heroHTML(p){
+  const col = COLORS[teamOf(p)] || "var(--pen)", r = 34, c = 2*Math.PI*r;
+  return `<div class="hero" style="--team:${col}">
+    <div class="hero-txt">
+      <p class="eyebrow">Model's top play</p>
+      <p class="hero-bet">${p.who}</p>
+      <p class="hero-line">${nice(p.bet)}</p>
+      <p class="hero-why">${projLine(p) || "in " + p.game} · worth about <b>${odds(p.fair)}</b></p>
+    </div>
+    <svg class="ring" viewBox="0 0 80 80" aria-hidden="true">
+      <circle cx="40" cy="40" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".18" stroke-width="7"/>
+      <circle cx="40" cy="40" r="${r}" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"
+        transform="rotate(-90 40 40)" stroke-dasharray="${c}" stroke-dashoffset="${c}"
+        style="--dash:${c * (1 - p.prob)}"/>
+      <text x="40" y="45" text-anchor="middle" class="ring-num">${pct(p.prob)}</text>
+    </svg></div>`;
+}
+let kind = "all";
+function drawTop(){
+  const all = bestPerPlayer(kind === "all" ? ALL
+    : kind === "value" ? ALL.filter(p => p.value).sort((a,b) => b.ev - a.ev)
+    : ALL.filter(p => kindOf(p.bet) === kind));
+  document.getElementById("hero").innerHTML = all.length ? heroHTML(all[0]) : "";
+  const l = all.slice(1, 13);
+  document.getElementById("top").innerHTML = l.length ? l.map(p => cardHTML(p)).join("")
+    : `<div class="card"><div class="why">No bets of that type this week.</div></div>`;
+}
+document.querySelectorAll("#filters button").forEach(b => b.addEventListener("click", () => {
+  kind = b.dataset.k;
+  document.querySelectorAll("#filters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  drawTop();
+}));
+if (DATA.odds){
+  const vt = document.getElementById("valueTab");
+  if (vt && ALL.some(p => p.value)) vt.hidden = false;
+}
+drawTop();
+document.getElementById("parlays").innerHTML = PAR.slice(0, 8).map(parlayHTML).join("");
+
+const byTime = [...DATA.games].sort((a,b) => a.kickoff.localeCompare(b.kickoff));
+const gbox = document.getElementById("games");
+byTime.forEach(g => {
+  const best = bestPerPlayer(g.players.flatMap(p => p.bets.map(b =>
+    ({...b, who:p.name, proj:p.proj, score:conviction(b, p.proj)}))).sort((a,b) => b.score - a.score)).slice(0, 6);
+  const d = document.createElement("details");
+  d.innerHTML = `<summary><span class="match"><i class="dot" style="background:${COLORS[g.away]}"></i><i class="dot" style="background:${COLORS[g.home]}"></i>
+      ${TEAMS[g.away]} at ${TEAMS[g.home]}</span>
+      <span class="right">${dayOf(g.kickoff)} ${g.kickoff.split(" ")[1]}<i class="caret"></i></span></summary>
+    <div class="body">${best.map(p => cardHTML(p, false)).join("")}</div>`;
+  gbox.appendChild(d);
+});
+
+const lbox = document.getElementById("lines");
+byTime.forEach(g => {
+  const hw = g.ml_prob[g.home], aw = g.ml_prob[g.away];
+  const fav = hw >= aw ? g.home : g.away;
+  const d = document.createElement("details");
+  const diff = g.proj_total - g.total;
+  const lean = Math.abs(diff) < 1.5 ? "right about where it should be"
+             : `model leans <b>${diff > 0 ? "over" : "under"}</b> by ${Math.abs(diff).toFixed(1)}`;
+  d.innerHTML = `<summary><span class="match"><i class="dot" style="background:${COLORS[g.away]}"></i><i class="dot" style="background:${COLORS[g.home]}"></i>
+      ${TEAMS[g.away]} at ${TEAMS[g.home]}</span>
+      <span class="right">${TEAMS[fav]} ${pct(g.ml_prob[fav])}<i class="caret"></i></span></summary>
+    <div class="body">
+      <div class="score"><span>${TEAMS[g.away]}</span><b>${g.team_totals_proj[g.away]} – ${g.team_totals_proj[g.home]}</b><span>${TEAMS[g.home]}</span></div>
+      <div class="winbar"><i style="width:${Math.round(aw*100)}%;background:${COLORS[g.away]}"></i><i style="width:${Math.round(hw*100)}%;background:${COLORS[g.home]}"></i></div>
+      <div class="row"><span>To win</span><b>${TEAMS[g.away]} ${pct(aw)} · ${TEAMS[g.home]} ${pct(hw)}</b></div>
+      <div class="row"><span>Spread ${g.spread}</span><b>${pct(g.cover[g.home])} / ${pct(g.cover[g.away])} to cover — near a coin flip</b></div>
+      <div class="row"><span>Total ${g.total}</span><b>model says ${g.proj_total}, ${lean}</b></div>
+    </div>`;
+  lbox.appendChild(d);
+});
+
+function openTab(name){
+  document.querySelectorAll("#nav button").forEach(x => x.setAttribute("aria-selected", String(x.dataset.v === name)));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + name));
+  ansEl.classList.remove("on"); ansEl.innerHTML = "";        // clear the old answer out of the way
+  const view = document.getElementById("v-" + name);
+  if (view && view.scrollIntoView) view.scrollIntoView({behavior:"smooth", block:"start"});
+}
+document.querySelectorAll("#nav button").forEach(b =>
+  b.addEventListener("click", () => openTab(b.dataset.v)));
+
+/* ---------- questions, answered from the data ---------- */
+const ansEl = document.getElementById("ans"), goEl = document.getElementById("go"), qEl = document.getElementById("q");
+let sample = null, busy = false;
+(typeof claude !== "undefined" && claude.use ? claude.use("sample") : Promise.resolve(null))
+  .then(s => { sample = s || proxySample; }).catch(() => { sample = proxySample; });
+/* on your own site the write-up comes from /api/ask, which keeps the API key server-side */
+async function proxySample(prompt, opts){
+  const r = await fetch("/api/ask", {method:"POST", headers:{"Content-Type":"application/json"},
+                                      body: JSON.stringify({prompt})});
+  if (!r.ok) throw new Error("ask failed");
+  const { text } = await r.json();
+  if (opts && opts.onText) opts.onText({ text });
+  return text;
+}
+function show(inner){
+  ansEl.innerHTML = `<div class="ans-head"><span>Your answer</span>
+      <button class="close" id="closeAns" aria-label="Close answer">Clear ✕</button></div>${inner}`;
+  ansEl.classList.add("on");
+  const c = document.getElementById("closeAns");
+  if (c) c.addEventListener("click", () => { ansEl.classList.remove("on"); ansEl.innerHTML = ""; });
+}
+function esc(t){ return t.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function render(t){
+  show(esc(t).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split(/\n{2,}/).map(b =>
+    /^\s*[-*]\s/m.test(b)
+      ? "<ul>"+b.split("\n").filter(l=>l.trim()).map(l=>"<li>"+l.replace(/^\s*[-*]\s*/,"")+"</li>").join("")+"</ul>"
+      : `<p class="lead">${b.replace(/\n/g,"<br>")}</p>`).join(""));
+}
+const PLAYERS = [...new Set(ALL.map(x => x.who))];
+const LAST = {}; PLAYERS.forEach(n => { const p = n.toLowerCase().split(" ");
+  LAST[p[p.length-1]] = n; LAST[n.toLowerCase()] = n; });
+const GAMELINE = /\bspread\b|\bmoneyline\b|\bml\b|\bcover\b|over\s?\/?\s?under|\bo\/u\b|\btotal\b|\bover\b|\bunder\b|who wins|winner|final score|point ?spread|favorite|straight up/;
+const UNSUPPORTED = /\bteaser\b|first touchdown|first td|\bftd\b/;
+function readQuestion(q){
+  const s = " " + q.toLowerCase().replace(/[^a-z0-9+\s'.-]/g, " ") + " ";
+  const teams = Object.keys(TEAMS).filter(t =>
+    new RegExp(`\\b${t.toLowerCase()}\\b`).test(s) || s.includes(TEAMS[t].toLowerCase()));
+  const AMB = ["lock","dart","chase","love","rice","hunt","fields","brown","moore","allen","walker",
+               "wilson","white","young","jones","ward","flowers","judge","bell","banks"];
+  const statish = /props?|yards?|yds|catch|reception|touchdown|\btd\b|anytime|rushing|receiving|passing|score|line/.test(s);
+  const players = [...new Set(Object.keys(LAST).filter(k => {
+    if (k.length <= 3 || !s.includes(" " + k)) return false;
+    if (k.includes(" ")) return true;
+    return !AMB.includes(k) || statish || teams.length;
+  }).map(k => LAST[k]))];
+  const full = players.filter(p => s.includes(" " + p.toLowerCase()));
+  if (full.length) {                     // "josh allen" shouldn't also drag in Braelon Allen
+    const surnames = new Set(full.map(p => p.toLowerCase().split(" ").pop()));
+    for (let i = players.length - 1; i >= 0; i--) {
+      const p = players[i];
+      if (!full.includes(p) && surnames.has(p.toLowerCase().split(" ").pop())) players.splice(i, 1);
+    }
+  }
+  const day = /\bmonday|\bmnf\b|\bmon\b/.test(s) ? "Mon" : /\bthursday|\btnf\b|\bthurs?\b/.test(s) ? "Thu"
+            : /\bsunday|\bsun\b|\bsnf\b/.test(s) ? "Sun" : null;
+  const kind = /touchdown|\btd\b|\batd\b|anytime scorer|to score|end ?zone|paydirt/.test(s) ? "TD"
+             : /catch|reception|\brecs?\b|grab/.test(s) ? "catches"
+             : /receiv|\bwr\b|\bte\b/.test(s) ? "rec"
+             : /rush|\brun|ground|carr|\brb\b/.test(s) ? "rush"
+             : /pass|throw|\bqb\b/.test(s) ? "pass" : null;
+  const wantsParlay = /parlay|\bsgp\b|same ?game|combo|multi|stack|build me/.test(s);
+  const risk = /longshot|long ?shot|payout|plus ?money|big odds|risky|underdog|\bdog\b|lottery|sprinkle/.test(s) ? "long"
+             : /safe|lock|chalk|likely|confident|best chance|banker|sure|solid|cash|hit/.test(s) ? "safe" : "any";
+  const n = Math.min(8, Math.max(2, parseInt((s.match(/\b([2-8])\b/) || [])[1] || 5)));
+  const gameline = GAMELINE.test(s);
+  const genericAsk = /\bbest\b|\bpicks?\b|\bbets?\b|\bplays?\b|\btop\b|favou?rite|recommend|what should|give me|anything good/.test(s);
+  const understood = !!(teams.length || players.length || day || kind || wantsParlay || gameline
+                        || risk !== "any" || genericAsk);
+  return { teams, players, day, kind, wantsParlay, risk, n, gameline, understood,
+           unsupported: UNSUPPORTED.test(s) };
+}
+function answerLocally(q){
+  const f = readQuestion(q);
+  let note = f.unsupported
+    ? `<p class="lead">Teasers and first-touchdown bets aren't rated here. Closest match:</p>` : "";
+  if (!f.understood && q.trim().length > 3)
+    note += `<p class="lead">Not sure what you meant — try a player, a team, "safest bets",
+      "parlays", or "Thursday night". Here's this week's best anyway:</p>`;
+  if (f.gameline && !f.wantsParlay){
+    let gs = DATA.games.filter(g => (!f.teams.length || f.teams.some(t => g.home === t || g.away === t))
+                                 && (!f.day || dayOf(g.kickoff) === f.day));
+    if (!gs.length) gs = DATA.games;
+    return show(`<p class="lead">Spreads and totals are the hardest bets to beat, so the model stays
+      close to FanDuel here. Player bets are where it has more to say.</p>` +
+      gs.slice(0, 4).map(g => {
+        const fav = g.ml_prob[g.home] >= g.ml_prob[g.away] ? g.home : g.away;
+        const cls = band(g.ml_prob[fav]);
+        return `<div class="card"><div class="top"><div class="bet">${TEAMS[fav]} to win</div>
+          <div class="big ${cls}">${pct(g.ml_prob[fav])}</div></div>
+          <div class="meter ${cls}"><i style="width:${Math.round(g.ml_prob[fav]*100)}%"></i></div>
+          <div class="why"><span>${TEAMS[g.away]} at ${TEAMS[g.home]}</span>
+            <span>projected <b>${g.team_totals_proj[g.away]}–${g.team_totals_proj[g.home]}</b></span>
+            <span>total ${g.total}, model says <b>${g.proj_total}</b></span></div></div>`;
+      }).join("") + `<button class="jump" data-tab="lines">See every game line →</button>`);
+  }
+  const inScope = x => (!f.teams.length || f.teams.some(t => x.gameCode.includes(t)))
+                    && (!f.day || dayOf(x.kick) === f.day)
+                    && (!f.players.length || f.players.some(p => (x.who || x.legs.join(" ")).includes(p)));
+  if (f.wantsParlay){
+    let l = PAR.filter(inScope);
+    if (f.risk === "long") l = [...l].sort((a,b) => a.prob - b.prob).filter(p => p.prob > .18);
+    l = l.slice(0, f.n);
+    return show(note + (l.length
+      ? `<p class="lead">${f.risk === "long" ? "Longer-priced parlays" : "Best parlays"}:</p>` + l.map(parlayHTML).join("")
+        + `<button class="jump" data-tab="parlays">See every parlay →</button>`
+      : `<p class="lead">No parlays match that. Try "best parlays".</p>`));
+  }
+  let l = ALL.filter(inScope);
+  if (f.kind) l = l.filter(x => kindOf(x.bet) === f.kind);
+  if (f.risk === "long") l = l.filter(x => x.prob < .55).sort((a,b) => b.score - a.score);
+  else if (f.risk === "safe") l = [...l].sort((a,b) => b.prob - a.prob).filter(x => x.prob >= .6);
+  l = bestPerPlayer(l).slice(0, f.n);
+  if (!l.length) return show(note + `<p class="lead">Nothing rated for that${f.players.length ? " — " + f.players.join(", ") + " may not have a line, or is hurt" : ""}. Try a team, a player, or "best bets".</p>`);
+  const lead = f.risk === "long" ? "Bigger payouts the model still likes"
+             : f.risk === "safe" ? "Most likely to hit" : "Top picks";
+  const scope = [f.players.join(" and "), f.teams.map(t => TEAMS[t]).join(" and "),
+                 f.day ? dayFull[f.day] : ""].filter(Boolean).join(", ");
+  show(note + `<p class="lead">${lead}${scope ? " — " + scope : ""}:</p>` + l.map(p => cardHTML(p)).join("")
+    + `<button class="jump" data-tab="picks">See the full list →</button>`);
+}
+async function ask(q){
+  if (busy) return;
+  answerLocally(q);
+  if (!sample) return;
+  busy = true; goEl.disabled = true;
+  const prior = ansEl.innerHTML;
+  try{
+    const games = DATA.games.filter(g => { const f = readQuestion(q);
+      return !f.teams.length || f.teams.some(t => g.home === t || g.away === t); });
+    await sample(`You are an NFL betting assistant talking to a casual bettor. Use ONLY the data below; never invent players, bets or numbers.
+
+DATA ("prob" = model's chance the bet wins, "fair" = break-even price):
+${JSON.stringify({week:DATA.week, games:(games.length?games:DATA.games).slice(0,6).map(g => ({
+  game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, kickoff:g.kickoff, line:g.spread, total:g.total,
+  projected:g.team_totals_proj, win_prob:g.ml_prob,
+  players:g.players.slice(0,6).map(p => ({name:p.name, projected:p.proj, bets:p.bets.slice(0,4)})),
+  parlays:g.parlays.slice(0,2)}))})}
+
+Lead with 3-5 picks, strongest first. Each: the bet and its chance, e.g. "Jahmyr Gibbs 50+ rushing yards — 90%". One short line of why from the projections. Plain language, short sentences, no tables. Close with one line that these are estimates and injuries change things.
+
+QUESTION: ${q}`, { onText: ({text}) => render(text) });
+  }catch(e){ ansEl.innerHTML = prior; }
+  finally{ busy = false; goEl.disabled = false; }
+}
+goEl.addEventListener("click", () => {
+  const q = qEl.value.trim(); if (!q) return;
+  qEl.blur();                                   // drop the iOS keyboard so the answer is visible
+  ask(q);
+  setTimeout(() => ansEl.scrollIntoView({behavior:"smooth", block:"nearest"}), 60);
+});
+qEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); goEl.click(); } });
+qEl.addEventListener("input", () => { qEl.style.height = "auto"; qEl.style.height = Math.min(qEl.scrollHeight, 130) + "px"; });
+document.addEventListener("click", e => {
+  const j = e.target && e.target.closest && e.target.closest(".jump");
+  if (j) openTab(j.dataset.tab);
+});
+document.querySelectorAll("[data-ex]").forEach(b =>
+  b.addEventListener("click", () => {
+    qEl.value = b.dataset.ex; qEl.blur(); ask(b.dataset.ex);
+    setTimeout(() => ansEl.scrollIntoView({behavior:"smooth", block:"nearest"}), 60);
+  }));
+</script>
+</body>
+</html>

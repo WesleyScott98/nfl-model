@@ -1,0 +1,45 @@
+name: Update picks
+
+# Rebuilds the site from fresh data. Times are UTC.
+#   Wed 15:00  — new week's lines are up
+#   Sat 15:00  — injury designations final
+#   Sun 15:00  — 11am ET, after inactives start landing
+#   Mon 21:00  — for Monday night
+#   Thu 21:00  — for Thursday night
+on:
+  schedule:
+    - cron: "0 15 * * 3,6"      # Wed + Sat, model only (no odds credits used)
+    - cron: "45 16 * * 0"       # Sun 12:45pm ET — inactives in, live FanDuel prices
+    - cron: "0 23 * * 0"        # Sun 7pm ET — refresh before the late window
+    - cron: "0 21 * * 1,4"      # Mon + Thu night games
+  workflow_dispatch:          # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build the site
+        env:
+          NFL_SEASON: "2026"
+          NFL_EDGE_CACHE: /tmp/nfl-cache
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          # full = pull player props too (~67 credits/run). Wed/Sat runs use lines only to save
+          # credits; the Sunday and primetime runs pull everything.
+          ODDS_MODE: ${{ (github.event.schedule == '0 15 * * 3,6') && 'lines' || 'full' }}
+        run: python build_site.py --out site
+      - name: Commit if anything changed
+        run: |
+          git config user.name "picks-bot"
+          git config user.email "actions@github.com"
+          git add site/index.html site/picks.json
+          git diff --staged --quiet || git commit -m "Picks refreshed $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
