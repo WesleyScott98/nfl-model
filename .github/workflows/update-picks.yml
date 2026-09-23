@@ -1,19 +1,31 @@
 name: Update picks
 
-# All times UTC. Eastern is UTC-4 through Nov 1, then UTC-5 (so these shift an hour later in ET
-# for the back half of the season).
-#   Wed 15:00 (11am ET) — new week's lines and data land        -> game lines only
-#   Wed 00:00 Thu (8pm ET Wed) — ~24h before Thursday night     -> props for that game
-#   Sat 17:00 (1pm ET) — ~24h before the Sunday slate           -> props for all Sunday games
-#   Sun 16:45 (12:45pm ET) — inactives, final refresh           -> game lines only
-#   Sun 00:00 Mon (8pm ET Sun) — ~24h before Monday night       -> props for that game
+# All times UTC (Eastern is UTC-4 until Nov 1, then UTC-5 — everything shifts an hour earlier in ET).
+#
+#   DAY-BEFORE runs pull player props, since that's when you place bets:
+#     Wed 00:00 Thu (8pm ET Wed)  -> Thursday night game
+#     Sat 17:00    (1pm ET)       -> the whole Sunday slate
+#     Sun 00:00 Mon (8pm ET Sun)  -> Monday night game
+#
+#   PRE-KICKOFF runs (~90 min out) refresh spreads, totals and moneylines only — cheap, and
+#   prop prices barely move in the last hour anyway:
+#     Thu 22:45 (6:45pm ET), Sun 15:30 (11:30am ET), Sun 18:45 (2:45pm ET),
+#     Sun 22:50 (6:50pm ET), Mon 22:45 (6:45pm ET)
+#
+#   Wed 15:00 (11am ET) picks up the new week's schedule, injuries and roster moves.
+#
+# Budget: ~91 credits/week, ~390/month of the free 500.
 on:
   schedule:
-    - cron: "0 15 * * 3"
-    - cron: "0 0 * * 4"
-    - cron: "0 17 * * 6"
-    - cron: "45 16 * * 0"
-    - cron: "0 0 * * 1"
+    - cron: "0 15 * * 3"      # Wed 11am ET  — new week's data, lines
+    - cron: "0 0 * * 4"       # Wed 8pm ET   — TNF, day before, props
+    - cron: "45 22 * * 4"     # Thu 6:45pm ET — TNF, ~90 min out, lines
+    - cron: "0 17 * * 6"      # Sat 1pm ET   — Sunday slate, day before, props
+    - cron: "30 15 * * 0"     # Sun 11:30am ET — 1pm games, ~90 min out, lines
+    - cron: "45 18 * * 0"     # Sun 2:45pm ET  — 4pm games, ~90 min out, lines
+    - cron: "50 22 * * 0"     # Sun 6:50pm ET  — SNF, ~90 min out, lines
+    - cron: "0 0 * * 1"       # Sun 8pm ET   — MNF, day before, props
+    - cron: "45 22 * * 1"     # Mon 6:45pm ET — MNF, ~90 min out, lines
   workflow_dispatch:
 
 permissions:
@@ -39,8 +51,8 @@ jobs:
           NFL_EDGE_CACHE: /tmp/nfl-cache
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           PROPS_WINDOW_HOURS: "30"
-          # the two data-only runs take game lines only; the day-before runs pull player props
-          ODDS_MODE: ${{ (github.event.schedule == '0 15 * * 3' || github.event.schedule == '45 16 * * 0') && 'lines' || 'full' }}
+          # props on the three day-before runs and on any manual run; lines only otherwise
+          ODDS_MODE: ${{ contains(fromJSON('["0 0 * * 4","0 17 * * 6","0 0 * * 1",""]'), github.event.schedule) && 'full' || 'lines' }}
         run: python build_site.py --out .
       - name: Commit if anything changed
         run: |
