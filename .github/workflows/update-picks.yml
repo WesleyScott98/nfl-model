@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-picks
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,5 +37,11 @@ jobs:
           git config user.name "picks-bot"
           git config user.email "actions@github.com"
           git add index.html picks.json
-          git diff --staged --quiet || git commit -m "Picks refreshed $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push
+          git diff --staged --quiet && echo "nothing changed" && exit 0
+          git commit -m "Picks refreshed $(date -u '+%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            echo "push race, retrying..."
+            sleep 5
+          done
+          exit 1
