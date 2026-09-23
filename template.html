@@ -524,12 +524,13 @@ function readQuestion(q){
   const AMB = ["lock","dart","chase","love","rice","hunt","fields","brown","moore","allen","walker",
                "wilson","white","young","jones","ward","flowers","judge","bell","banks"];
   const statish = /props?|yards?|yds|catch|reception|touchdown|\btd\b|anytime|rushing|receiving|passing|score|line/.test(s);
+  const word = k => new RegExp(`(^|[^a-z])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z]|$)`).test(s);
   const players = [...new Set(Object.keys(LAST).filter(k => {
-    if (k.length <= 3 || !s.includes(" " + k)) return false;
+    if (k.length <= 3 || !word(k)) return false;   // "rushing" must not match the player Cooper Rush
     if (k.includes(" ")) return true;
     return !AMB.includes(k) || statish || teams.length;
   }).map(k => LAST[k]))];
-  const full = players.filter(p => s.includes(" " + p.toLowerCase()));
+  const full = players.filter(p => word(p.toLowerCase()));
   if (full.length) {                     // "josh allen" shouldn't also drag in Braelon Allen
     const surnames = new Set(full.map(p => p.toLowerCase().split(" ").pop()));
     for (let i = players.length - 1; i >= 0; i--) {
@@ -547,13 +548,49 @@ function readQuestion(q){
   const wantsParlay = /parlay|\bsgp\b|same ?game|combo|multi|stack|build me/.test(s);
   const risk = /longshot|long ?shot|payout|plus ?money|big odds|risky|underdog|\bdog\b|lottery|sprinkle/.test(s) ? "long"
              : /safe|lock|chalk|likely|confident|best chance|banker|sure|solid|cash|hit/.test(s) ? "safe" : "any";
+  const legMatch = s.match(/(\d{1,2})\s*-?\s*(?:leg|legger|team|pick)\b/) ||
+                   (/parlay|\bsgp\b|combo/.test(s) ? s.match(/\b(\d{1,2})\b/) : null);
+  const legs = legMatch ? Math.min(12, Math.max(2, parseInt(legMatch[1]))) : null;
   const n = Math.min(8, Math.max(2, parseInt((s.match(/\b([2-8])\b/) || [])[1] || 5)));
   const gameline = GAMELINE.test(s);
   const genericAsk = /\bbest\b|\bpicks?\b|\bbets?\b|\bplays?\b|\btop\b|favou?rite|recommend|what should|give me|anything good/.test(s);
   const understood = !!(teams.length || players.length || day || kind || wantsParlay || gameline
                         || risk !== "any" || genericAsk);
-  return { teams, players, day, kind, wantsParlay, risk, n, gameline, understood,
+  return { teams, players, day, kind, wantsParlay, risk, n, legs, gameline, understood,
            unsupported: UNSUPPORTED.test(s) };
+}
+function decToAm(d){ return d >= 2 ? "+" + Math.round((d - 1) * 100) : "-" + Math.round(100 / (d - 1)); }
+function amToDec(a){ return a > 0 ? 1 + a / 100 : 1 + 100 / -a; }
+function buildParlay(f, inScope){
+  // one leg per player, strongest first; legs from different games are independent, and
+  // same-game legs tend to help each other, so the real chance is usually a touch higher
+  let pool = ALL.filter(inScope);
+  if (f.kind) pool = pool.filter(x => kindOf(x.bet) === f.kind);
+  if (f.risk === "safe") pool = [...pool].sort((a, b) => b.prob - a.prob);
+  else if (f.risk === "long") pool = pool.filter(x => x.prob < .6).sort((a, b) => b.score - a.score);
+  const seen = new Set(), legs = [];
+  for (const x of pool){
+    if (seen.has(x.who)) continue;
+    seen.add(x.who); legs.push(x);
+    if (legs.length === f.legs) break;
+  }
+  if (legs.length < 2) return null;
+  const prob = legs.reduce((a, x) => a * x.prob, 1);
+  const fairDec = 1 / Math.max(prob, 1e-9);
+  const priced = legs.every(x => x.book !== undefined);
+  const payout = priced ? legs.reduce((a, x) => a * amToDec(x.book), 1) : null;
+  return { legs, prob, fair: decToAm(fairDec), payout: payout ? decToAm(payout) : null,
+           short: legs.length < f.legs };
+}
+function parlayCard(p, title){
+  const cls = band(p.prob);
+  return `<div class="card"><div class="top">
+      <div class="bet">${title}</div>
+      <div class="big ${cls}">${p.prob >= .01 ? pct(p.prob) : (p.prob * 100).toFixed(1) + "%"}</div></div>
+    <div class="meter ${cls}"><i style="--w:${Math.max(2, Math.round(p.prob * 100))}%"></i></div>
+    <div class="why">${p.legs.map(l =>
+      `<span style="display:block;width:100%;color:var(--ink)">• ${l.who} — ${nice(l.bet)} <b>${pct(l.prob)}</b></span>`).join("")}
+      <span>${p.payout ? `FanDuel pays about <b>${p.payout}</b> · ` : ""}worth <b>${p.fair}</b></span></div></div>`;
 }
 function answerLocally(q){
   const f = readQuestion(q);
@@ -582,6 +619,20 @@ function answerLocally(q){
   const inScope = x => (!f.teams.length || f.teams.some(t => x.gameCode.includes(t)))
                     && (!f.day || dayOf(x.kick) === f.day)
                     && (!f.players.length || f.players.some(p => (x.who || x.legs.join(" ")).includes(p)));
+  if (f.legs && (f.wantsParlay || f.kind || f.day || f.teams.length)){
+    const p = buildParlay(f, inScope);
+    if (!p) return show(note + `<p class="lead">Not enough bets match that to build a parlay. Try dropping the team or bet type.</p>`);
+    const what = [f.risk === "safe" ? "safest" : f.risk === "long" ? "longer-priced" : "",
+                  f.kind === "TD" ? "anytime touchdown" : f.kind === "catches" ? "catches" :
+                  f.kind === "rec" ? "receiving" : f.kind === "rush" ? "rushing" : "",
+                  f.day ? dayFull[f.day] : "", f.teams.map(t => TEAMS[t]).join(" and ")]
+                 .filter(Boolean).join(" ");
+    return show(note + `<p class="lead">Here's a ${p.legs.length}-leg ${what} parlay${p.short ?
+        " — that's all the legs that qualified" : ""}. Every leg has to hit:</p>`
+      + parlayCard(p, `${p.legs.length}-leg parlay`)
+      + `<p class="sub">Longer parlays pay more and hit less. At ${pct(p.prob)}, this one cashes
+         about once every ${Math.max(2, Math.round(1 / p.prob))} tries.</p>`);
+  }
   if (f.wantsParlay){
     let l = PAR.filter(inScope);
     if (f.risk === "long") l = [...l].sort((a,b) => a.prob - b.prob).filter(p => p.prob > .18);
