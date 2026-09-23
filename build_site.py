@@ -281,7 +281,10 @@ def main():
     if not data["games"]:
         print("no games with lines for this week — leaving the current site in place")
         return
-    html = open(os.path.join(here, "template.html")).read().replace("__DATA__", json.dumps(data))
+    # "</" is escaped so a stray "</script" in third-party data (odds feed, player names) can't
+    # terminate the <script> block early and inject markup into every visitor's page.
+    payload = json.dumps(data).replace("</", "<\\/")
+    html = open(os.path.join(here, "template.html")).read().replace("__DATA__", payload)
     html = html.replace("Week 3 picks", f"Week {week} picks").replace("Week 3 NFL picks", f"Week {week} NFL picks")
     os.makedirs(os.path.join(here, a.out), exist_ok=True)
     with open(os.path.join(here, a.out, "index.html"), "w") as f:
