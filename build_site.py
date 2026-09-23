@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "model"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # flat layout: all files in one folder
 import calibrate as K          # noqa: E402
 import edge as E               # noqa: E402
 from game import Model         # noqa: E402
@@ -255,7 +255,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--season", type=int, default=int(os.environ.get("NFL_SEASON", 2026)))
     ap.add_argument("--week", type=int)
-    ap.add_argument("--out", default="site")
+    ap.add_argument("--out", default=".")
     ap.add_argument("--sims", type=int, default=20000)
     a = ap.parse_args()
     here = os.path.dirname(os.path.abspath(__file__))

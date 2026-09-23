@@ -1,9 +1,9 @@
 [build]
-  publish = "site"
+  publish = "."
   command = "echo 'site is prebuilt by GitHub Actions'"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "."
 
 [[redirects]]
   from = "/api/ask"
