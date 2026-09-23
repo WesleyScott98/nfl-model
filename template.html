@@ -223,6 +223,7 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
     <h3>Best bets</h3>
     <p class="note">Ranked by how strongly the model likes them, not by the odds offered.
       Bets priced shorter than −350 are left out — too much risk for the return.</p>
+    <p class="note" id="pricenote"></p>
     <div class="filters" id="filters">
       <button data-k="all" aria-pressed="true">Everything</button>
       <button data-k="TD" aria-pressed="false">Touchdowns</button>
@@ -402,6 +403,10 @@ if (DATA.odds){
   const vt = document.getElementById("valueTab");
   if (vt && ALL.some(p => p.value)) vt.hidden = false;
 }
+const anyBook = ALL.some(p => p.book !== undefined);
+document.getElementById("pricenote").textContent = anyBook
+  ? "FanDuel's price is shown next to each bet. A VALUE badge means FanDuel is paying more than the bet is worth."
+  : "FanDuel's player-prop prices post about a day before kickoff — until then you'll see the model's fair price only.";
 drawTop();
 document.getElementById("parlays").innerHTML = PAR.slice(0, 8).map(parlayHTML).join("");
 
@@ -433,6 +438,8 @@ byTime.forEach(g => {
       <div class="score"><span>${TEAMS[g.away]}</span><b>${g.team_totals_proj[g.away]} – ${g.team_totals_proj[g.home]}</b><span>${TEAMS[g.home]}</span></div>
       <div class="winbar"><i style="width:${Math.round(aw*100)}%;background:${COLORS[g.away]}"></i><i style="width:${Math.round(hw*100)}%;background:${COLORS[g.home]}"></i></div>
       <div class="row"><span>To win</span><b>${TEAMS[g.away]} ${pct(aw)} · ${TEAMS[g.home]} ${pct(hw)}</b></div>
+      ${g.book_ml && Object.keys(g.book_ml).length ? `<div class="row"><span>FanDuel moneyline</span>
+        <b>${Object.entries(g.book_ml).map(([t, p]) => `${TEAMS[t] || t} ${odds(p)}`).join(" · ")}</b></div>` : ""}
       <div class="row"><span>Spread ${g.spread}</span><b>${pct(g.cover[g.home])} / ${pct(g.cover[g.away])} to cover — near a coin flip</b></div>
       <div class="row"><span>Total ${g.total}</span><b>model says ${g.proj_total}, ${lean}</b></div>
     </div>`;
