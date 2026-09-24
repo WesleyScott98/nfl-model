@@ -161,7 +161,11 @@ def simulate_game(home, away, spread_home, total, tp, usage_home, usage_away, qb
               + C.SCRIPT_PASS_BETA * (-own_margin) / 14.0 + wx_pr)
         pr = np.clip(pr, 0.30, 0.80)
         pass_plays = rng.binomial(plays, pr)
-        sacks = rng.binomial(pass_plays, T.sack_rate)
+        ol_lost = float(T.get("ol_missing", 0.0) or 0.0) if hasattr(T, "get") else 0.0
+        ol_ypc = max(1 - min(C.OL_INJURY_YPC * ol_lost, C.OL_INJURY_CAP), 0.75) if ol_lost else 1.0
+        ol_ypr = max(1 - min(C.OL_INJURY_YPR * ol_lost, C.OL_INJURY_CAP), 0.85) if ol_lost else 1.0
+        sack_rate = T.sack_rate * (1 + min(C.OL_INJURY_SACK * ol_lost, 0.6)) if ol_lost else T.sack_rate
+        sacks = rng.binomial(pass_plays, min(sack_rate, 0.25))
         att = pass_plays - sacks
         rushes = plays - pass_plays
         eff = np.clip(((pts[team] + 7) / (exp_pts[team] + 7)) ** C.EFFICIENCY_POINTS_ELASTICITY, 0.6, 1.6)
@@ -206,7 +210,7 @@ def simulate_game(home, away, spread_home, total, tp, usage_home, usage_away, qb
         car_p = car_p / car_p.sum()
         carries = rng.multinomial(rushes, rng.dirichlet(car_p * C.CARRY_SHARE_CONC, n))
         run_f = d_ypc
-        ypc = np.append(u["ypc"].values, OTHER_RUSH_YPC) * run_f
+        ypc = np.append(u["ypc"].values, OTHER_RUSH_YPC) * run_f * ol_ypc
         rush_yds = (carries * ypc * np.sqrt(eff)[:, None]
                     + np.sqrt(carries) * C.RUSH_SD_PER_CARRY * _t_noise(rng, carries.shape, C.RUSH_T_DF))
         rush_yds = np.where(carries > 0, rush_yds, 0.0)

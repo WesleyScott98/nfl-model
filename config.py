@@ -144,3 +144,15 @@ THIRD_DOWN_PLAYS_BETA = 4.0 # extra plays per game when a defense is poor on thi
 # full strength; the mechanism is sound and it never hurt either half.
 USE_RZ_DEFENSE = True
 RZ_STRENGTH = 1.0            # 1.0 = apply the opponent's full red-zone factor
+
+# ---- offensive line injuries. Missing linemen hurt the run game and pass protection, and the
+# betting total can't see a Wednesday line shuffle. Sized by judgement, then tested — see README.
+# Tested on 2025, both halves: the RUN-GAME effect held up (rushing Brier -0.0001 / -0.0007;
+# all markets -0.00002 / -0.00014, better in each half). The pass-protection effect made things
+# WORSE in both halves and is switched off — the betting total already prices a team throwing
+# behind a patched line, but it can't see the run game degrade.
+AUTO_OL_ADJUST = True
+OL_INJURY_YPC = 0.06          # rushing yards per carry, per starter-equivalent lineman missing
+OL_INJURY_YPR = 0.0           # tested and rejected
+OL_INJURY_SACK = 0.0          # tested and rejected
+OL_INJURY_CAP = 0.20

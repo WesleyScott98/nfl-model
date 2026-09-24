@@ -197,3 +197,16 @@ def defense_snaps(seasons):
                            "FRONT", "OTHER"))
     df = df[df["grp"] != "OTHER"]
     return df[["season", "week", "team", "gsis_id", "grp", "defense_pct"]]
+
+
+def line_snaps(seasons):
+    """Offensive line snap share per player-week. Missing linemen hurt both the run game and
+    pass protection, and the betting total can't see a Wednesday line shuffle."""
+    import numpy as np
+    df = pd.concat([_cached("snaps", s, nfl.load_snap_counts) for s in seasons], ignore_index=True)
+    df = df[(df["game_type"] == "REG") & df["offense_pct"].notna()]
+    info = _cached("players", 0, lambda _: nfl.load_players())[["gsis_id", "pfr_id", "position"]].dropna(subset=["pfr_id"])
+    df = df.drop(columns=["position"], errors="ignore")
+    df = df.merge(info, left_on="pfr_player_id", right_on="pfr_id", how="inner")
+    df = df[df["position"].isin(["T", "G", "C", "OL", "OT", "OG", "LT", "RT", "LG", "RG"])]
+    return df[["season", "week", "team", "gsis_id", "offense_pct"]]
