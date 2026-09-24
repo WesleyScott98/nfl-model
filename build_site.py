@@ -15,6 +15,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # flat layout: all files in one folder
@@ -36,9 +37,26 @@ ODDS_MODE = os.environ.get("ODDS_MODE", "full" if os.environ.get("ODDS_API_KEY")
 # evening run covers Monday night, and the Wednesday-evening run covers Thursday night — so prices
 # are posted roughly a day before each game. Other runs take game lines only (3 credits a slate).
 PROPS_WINDOW_HOURS = float(os.environ.get("PROPS_WINDOW_HOURS", 30))
-PROP_MARKETS = ["player_anytime_td", "player_receptions", "player_reception_yds", "player_rush_yds"]
+PROP_MARKETS = ["player_anytime_td", "player_receptions", "player_reception_yds", "player_rush_yds",
+                "player_pass_yds"]   # passing lines aren't bet here — they identify the starting QB
 STAT_TO_MARKET = {"receptions": "receptions", "rec_yds": "rec_yds", "rush_yds": "rush_yds",
                   "anytime TD": "anytime_td"}
+# FanDuel posts props only for players it expects to play, so the board itself says who's active.
+# Only trusted when the board is well populated, and it downgrades rather than removes.
+MARKET_BOARD_MIN = 12        # players with props before we trust an absence
+MARKET_ABSENT_P = 0.30       # a projected starter with no props at all: treat as 30% to play
+# Absence-based inactive detection is OFF: in testing it flagged backups the book simply hadn't
+# priced, and missed a genuinely inactive starter when he was his position's only entry. The
+# injury report, live status and snap-collapse checks cover inactives more reliably.
+# Reading the STARTING QB off the board is separate, and stays on - it's unambiguous.
+MARKET_ABSENT_ENABLED = False
+# Anchoring to the market on ROLE, not on edge:
+# FanDuel's posted line is the market's view of a player's workload. If the model is within
+# MARKET_TRUST_BAND of the line, leave it alone - that's where genuine disagreements (and edges)
+# live. If it's outside that band, the model has probably misread the player's role (a promotion,
+# a committee change, a new team), so close MARKET_PULL of the gap toward the line.
+MARKET_TRUST_BAND = 0.35     # within +/-35% of the posted line, trust the model completely
+MARKET_PULL = 0.6            # beyond it, move 60% of the way to the market
 
 # QB passing yards is deliberately absent: it's the model's weakest market (2-9% skill in backtests
 # vs ~30% for receptions and yards), and the odds feed doesn't price it either.
@@ -108,6 +126,62 @@ def fetch_odds(this_week=None):
     except Exception as ex:
         print(f"odds unavailable ({ex}); building with model prices only")
         return {}
+
+
+def market_signals(book, usage, quiet=False):
+    """Read the FanDuel board for who's playing.
+
+    A sportsbook posts props only for players it expects on the field, so:
+      * the QB with a posted passing line is the starter for that team
+      * a player the model projects as a starter with NO posted props, on a board that's otherwise
+        full, is probably inactive -> downgraded to MARKET_ABSENT_P, not deleted
+    """
+    qb_from_book, downgrade = {}, {}
+    if usage is None or not len(usage):
+        return qb_from_book, downgrade
+    team_of = {str(r.full_name).lower(): r.team for r in usage.itertuples()}
+    for matchup, entry in book.items():
+        props = entry.get("props") or {}
+        if not props:
+            continue
+        names = {p for (p, _, _) in props}
+        teams = matchup.split("@")
+        # Starting QB = the highest posted passing line on each team. A book only prices a passing
+        # line for someone it expects to start, so this needs no other context.
+        best_qb = {}
+        for (p, st, ln), _ in props.items():
+            if st != "pass_yds":
+                continue
+            tm = team_of.get(str(p).lower())
+            if tm and ln and ln > best_qb.get(tm, (0, None))[0]:
+                best_qb[tm] = (ln, p)
+        for tm, (_, p) in best_qb.items():
+            qb_from_book[tm] = p
+        if len(names) < MARKET_BOARD_MIN:
+            continue                                  # thin board: an absence means nothing
+        # A projected starter missing from the board is only meaningful if the board covers his
+        # team AND his position — otherwise the market simply isn't offering that kind of prop.
+        by_team = {t: {r.full_name for r in usage.itertuples() if r.team == t and r.full_name in names}
+                   for t in teams}
+        covered_pos = {t: {r.pos for r in usage.itertuples() if r.team == t and r.full_name in names}
+                       for t in teams}
+        for r in (usage.itertuples() if MARKET_ABSENT_ENABLED else []):
+            if r.team not in teams or r.full_name in names:
+                continue
+            if len(by_team.get(r.team, ())) < 5:            # thin coverage for this team
+                continue
+            if r.pos not in covered_pos.get(r.team, set()):  # market isn't pricing his position
+                continue
+            if getattr(r, "s_tgt", 0) >= 0.12 or getattr(r, "s_car", 0) >= 0.25:
+                downgrade[r.full_name] = MARKET_ABSENT_P
+    if not quiet:
+        if qb_from_book:
+            print("[fanduel] starting QB per the board: "
+                  + ", ".join(f"{t}={n}" for t, n in sorted(qb_from_book.items())))
+        if downgrade:
+            print("[fanduel] projected starters with no props posted (treated as "
+                  f"{int(MARKET_ABSENT_P*100)}% to play): " + ", ".join(sorted(downgrade)))
+    return qb_from_book, downgrade
 
 
 def attach_price(bet, player, book_props):
@@ -184,6 +258,7 @@ def auto_injury_watch(m, week):
 
 
 def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
+    role_notes = []
     m = Model(season)
     cal = K.load()
     this_week = {f"{g.away_team}@{g.home_team}" for g in m.sched[m.sched["week"] == week].itertuples()}
@@ -200,6 +275,15 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
         qb_name = roles.get("QB")
         if qb_name and tm not in qb_named:
             qb_named[tm] = qb_name
+    # the sportsbook board is the most current signal of all — it outranks the depth chart,
+    # though anything you set by hand in overrides.json still wins
+    book_qb, book_downgrade = market_signals(book, m.features(week)[1])
+    manual_qb = set((overrides[3] or {}).keys())
+    for tm, name in book_qb.items():
+        if tm not in manual_qb:
+            qb_named[tm] = name
+    for nm, p in book_downgrade.items():
+        questionable.setdefault(nm, p)
     out_names = list(dict.fromkeys(list(out_names) + live_out))
     questionable = {**auto_q, **live_q, **questionable}   # live beats auto; your overrides beat both
     fair = lambda p: decimal_to_american(1 / max(min(p, 0.97), 0.02))
@@ -266,7 +350,21 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
                 from odds import american_to_decimal
                 for st, ln, price in posted:
                     try:
-                        p = K.apply(sim.prob(r.player, st, ln), st, cal)
+                        if st == "anytime_td":
+                            p = K.apply(sim.prob(r.player, st, ln), st, cal)
+                        else:
+                            x = sim.stat(r.player, st)
+                            x = x[~np.isnan(x)] if hasattr(x, "__len__") else x
+                            mu = float(x.mean()) if len(x) else 0.0
+                            scale = 1.0
+                            if ln > 0 and mu > 0:
+                                gap = mu / ln - 1.0
+                                if abs(gap) > MARKET_TRUST_BAND:
+                                    target = mu + (ln - mu) * MARKET_PULL   # close most of the gap
+                                    scale = max(0.4, min(target / mu, 2.5))
+                                    role_notes.append(f"{r.player} {st}: model {mu:.1f} vs FanDuel "
+                                                      f"{ln} -> using {mu*scale:.1f}")
+                            p = K.apply(float((x * scale > ln).mean()), st, cal)
                     except Exception:
                         continue
                     label = "anytime TD" if st == "anytime_td" else f"{int(ln + 0.5)}+ {st.replace('_', ' ')}"
@@ -295,6 +393,11 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
         game["parlays"] = sorted(combos, key=lambda x: -x["prob"])[:6]
         out["games"].append(game)
         print(f"  {g.away_team}@{g.home_team}", flush=True)
+    if role_notes:
+        print(f"[fanduel] {len(role_notes)} projections pulled toward the market "
+              f"(the model had the player's role wrong):")
+        for n in role_notes[:15]:
+            print("   ", n)
     return out
 
 
