@@ -39,6 +39,11 @@ class Model:
         if week not in self._cache:
             tp = F.team_profiles(self.pbp, self.season, week)
             dp = D.defense_profiles(self.pbp, self.info, self.season, week)
+            try:
+                rzp = D.redzone_profiles(self.pbp, self.season, week)
+                dp = dp.join(rzp.drop(columns=[c for c in rzp.columns if c in dp.columns]))
+            except Exception as ex:
+                print(f"[redzone] unavailable ({ex})")
             attrs = {**tp.attrs, **dp.attrs}
             tp = tp.join(dp)
             tp.attrs = attrs

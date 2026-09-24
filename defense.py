@@ -35,7 +35,8 @@ def _ridge(df, val, w, lam, iters=8):
 
 
 _COLS = ["season", "week", "game_id", "posteam", "defteam", "pass", "rush", "two_point_attempt", "pass_attempt",
-         "sack", "receiver_player_id", "epa", "yards_gained", "complete_pass", "defense_coverage_type"]
+         "sack", "receiver_player_id", "epa", "yards_gained", "complete_pass", "defense_coverage_type",
+         "yardline_100", "touchdown", "down", "first_down"]
 
 
 def _plays(pbp, season, week):
@@ -87,6 +88,30 @@ def defense_profiles(pbp: pd.DataFrame, info: pd.DataFrame, season: int, week: i
         prof[f"yptr_{p}"] = ((yp + 120 * lg_ypt) / (wp + 120)) / lg_ypt
         lg[f"ypt_{p}"] = lg_ypt
 
+    # ---- red zone: TDs allowed per trip inside the 20, and third-down conversions allowed.
+    # The betting total says how many POINTS a team scores; it doesn't say whether those points
+    # come as touchdowns or field goals. A defense that holds in the red zone turns TDs into FGs.
+    rz = df[(df["yardline_100"] <= 20) & df["drive"].notna()] if "drive" in df.columns else df[df["yardline_100"] <= 20]
+    if len(rz):
+        trips = rz.groupby(["defteam", "game_id", "drive"] if "drive" in rz.columns else ["defteam", "game_id"])
+        tds = trips["touchdown"].max().fillna(0).groupby("defteam").sum()
+        cnt = trips.size().groupby("defteam").size()
+        lg_rz = float(tds.sum() / max(cnt.sum(), 1))
+        rate = ((tds + 40 * lg_rz) / (cnt + 40)).reindex(prof.index)     # shrunk to league
+        prof["rz_td_allowed"] = rate.fillna(lg_rz)
+        prof["rz_factor"] = (prof["rz_td_allowed"] / lg_rz).clip(0.8, 1.25)
+        lg["rz_td"] = lg_rz
+    else:
+        prof["rz_td_allowed"] = np.nan
+        prof["rz_factor"] = 1.0
+        lg["rz_td"] = 0.55
+    third = df[df["down"] == 3]
+    if len(third):
+        conv = third.groupby("defteam")["first_down"].mean()
+        lg3 = float(third["first_down"].mean())
+        prof["third_down_allowed"] = conv.reindex(prof.index).fillna(lg3)
+        lg["third_down"] = lg3
+
     # ---- 3. coverage shell mix
     if "defense_coverage_type" in df.columns:
         pp = df[df["pass_play"] & df["defense_coverage_type"].isin(TWO_HIGH | ONE_HIGH)]
@@ -128,3 +153,43 @@ def player_shell_splits(pbp: pd.DataFrame, snaps: pd.DataFrame, season: int, wee
     s1 = (a.p1 + k * s) / (a.t1 + k)
     res = pd.DataFrame({"s2r": (s2 / s).clip(0.6, 1.6), "s1r": (s1 / s).clip(0.6, 1.6)}).dropna()
     return res.reset_index()
+
+
+def redzone_profiles(pbp: pd.DataFrame, season: int, week: int) -> pd.DataFrame:
+    """How each defense behaves once the offense gets close, and on third down.
+
+    The market total already says roughly how many points a team scores, so this is NOT used to
+    change how MUCH a team scores — only HOW: a defense that gets gashed by goal-line runs but
+    holds up against the fade should push touchdowns toward running backs, and vice versa. Also
+    tracks third-down defense, which shifts how many plays a game holds.
+    """
+    df = _plays(pbp, season, week)
+    rz = df[(df["yardline_100"] <= 20)]
+    out = {}
+    if len(rz):
+        rz = rz.assign(is_pass=rz["pass_play"].astype(float),
+                       td=rz["touchdown"].fillna(0).astype(float))
+        g = rz.groupby("defteam")
+        w = g["w"].sum()
+        td_pass = rz.assign(x=rz["td"] * rz["is_pass"] * rz["w"]).groupby("defteam")["x"].sum()
+        td_rush = rz.assign(x=rz["td"] * (1 - rz["is_pass"]) * rz["w"]).groupby("defteam")["x"].sum()
+        plays = g["w"].sum()
+        lg_pass_share = td_pass.sum() / max(td_pass.sum() + td_rush.sum(), 1)
+        # shrink hard: red-zone samples are small and noisy
+        k = 12.0
+        share = (td_pass + k * lg_pass_share) / (td_pass + td_rush + k)
+        out["rz_pass_td_share"] = share / lg_pass_share            # >1 = allows more passing TDs
+        out["rz_td_rate"] = ((rz.assign(x=rz["td"] * rz["w"]).groupby("defteam")["x"].sum() + 3 *
+                              (rz["td"] * rz["w"]).sum() / max(plays.sum(), 1)) / (plays + 3))
+        out["rz_plays"] = plays
+    third = df[df["down"] == 3]
+    if len(third):
+        conv = third.assign(x=third["first_down"].fillna(0) * third["w"]).groupby("defteam")["x"].sum()
+        n = third.groupby("defteam")["w"].sum()
+        lg = conv.sum() / max(n.sum(), 1)
+        out["third_down_allowed"] = ((conv + 40 * lg) / (n + 40)) / lg   # >1 = worse on third down
+    prof = pd.DataFrame(out)
+    for c in ("rz_pass_td_share", "third_down_allowed"):
+        if c in prof:
+            prof[c] = prof[c].clip(0.8, 1.25).fillna(1.0)
+    return prof

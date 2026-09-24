@@ -123,3 +123,16 @@ DEF_INJURY_DB_CMP = 0.015       # +1.5% completion rate likewise
 DEF_INJURY_FRONT_YPC = 0.045    # +4.5% yards per carry per starter-equivalent front-seven missing
 DEF_INJURY_FRONT_YPT = 0.015    # pass rush matters for the pass game too, a little
 DEF_INJURY_CAP = 0.15           # never swing a defense by more than 15%
+
+# Red-zone and third-down defense. Used only to shape HOW a team scores (pass vs run touchdowns)
+# and how many plays a game holds — never how much it scores, since the market total covers that.
+USE_REDZONE = True
+RZ_TD_SPLIT_BETA = 0.5      # how strongly a defense's pass/run TD profile shifts the split
+THIRD_DOWN_PLAYS_BETA = 4.0 # extra plays per game when a defense is poor on third down
+
+# ---- red-zone defence: shifts the TD/FG mix without changing total points.
+# Tested on 2025 (both halves, 5,288 player-games): anytime-TD Brier -0.00017, better in each half
+# independently, 95% CI [-0.00038, +0.00002] — consistent but at the edge of significance. ON at
+# full strength; the mechanism is sound and it never hurt either half.
+USE_RZ_DEFENSE = True
+RZ_STRENGTH = 1.0            # 1.0 = apply the opponent's full red-zone factor

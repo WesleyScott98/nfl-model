@@ -153,7 +153,10 @@ def simulate_game(home, away, spread_home, total, tp, usage_home, usage_away, qb
             d_ypc = (1 - a) * d_ypc + a * O.ypc_adj / la["ypc_adj"]
             d_fun = (1 - a) * d_fun + a * O.funnel_adj_z
 
-        plays = np.clip(np.round(rng.normal((T.plays_pg + O.plays_allowed_pg) / 2, C.PLAYS_SD, n)), 40, 90).astype(int)
+        plays_mu = (T.plays_pg + O.plays_allowed_pg) / 2
+        if getattr(C, "USE_REDZONE", False) and "third_down_allowed" in O.index and O.third_down_allowed == O.third_down_allowed:
+            plays_mu += C.THIRD_DOWN_PLAYS_BETA * (float(O.third_down_allowed) - 1)   # drives last longer
+        plays = np.clip(np.round(rng.normal(plays_mu, C.PLAYS_SD, n)), 40, 90).astype(int)
         pr = (T.neutral_pass_rate + C.FUNNEL_BETA * d_fun
               + C.SCRIPT_PASS_BETA * (-own_margin) / 14.0 + wx_pr)
         pr = np.clip(pr, 0.30, 0.80)
@@ -209,8 +212,17 @@ def simulate_game(home, away, spread_home, total, tp, usage_home, usage_away, qb
         rush_yds = np.where(carries > 0, rush_yds, 0.0)
 
         # ---------------- touchdowns ----------------
-        tds = rng.poisson(pts[team] / C.POINTS_PER_TD)
-        pass_td = rng.binomial(tds, np.clip(T.pass_td_share + 0.02 * d_fun, 0.35, 0.8))
+        ppt = C.POINTS_PER_TD
+        if getattr(C, "USE_RZ_DEFENSE", False) and "rz_factor" in O.index and O.rz_factor == O.rz_factor:
+            # a defense that allows fewer TDs per red-zone trip pushes points toward field goals,
+            # i.e. more points are needed per touchdown
+            ppt = C.POINTS_PER_TD / (1 + (float(O.rz_factor) - 1) * C.RZ_STRENGTH)
+        tds = rng.poisson(pts[team] / ppt)
+        split = T.pass_td_share + 0.02 * d_fun
+        if getattr(C, "USE_REDZONE", False) and "rz_pass_td_share" in O.index and O.rz_pass_td_share == O.rz_pass_td_share:
+            # a defense that concedes passing scores pushes this team's TDs toward the air
+            split *= 1 + C.RZ_TD_SPLIT_BETA * (float(O.rz_pass_td_share) - 1)
+        pass_td = rng.binomial(tds, np.clip(split, 0.30, 0.85))
         rush_td = tds - pass_td
         rtd_p = np.append(0.6 * u["s_rz"].values + 0.4 * u["s_tgt"].values, 0.0)
         rtd_p[-1] = max(1 - rtd_p[:-1].sum(), 0.04)
