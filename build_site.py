@@ -57,6 +57,11 @@ MARKET_ABSENT_ENABLED = False
 # a committee change, a new team), so close MARKET_PULL of the gap toward the line.
 MARKET_TRUST_BAND = 0.35     # within +/-35% of the posted line, trust the model completely
 MARKET_PULL = 0.6            # beyond it, move 60% of the way to the market
+# Touchdowns get the same treatment. The model reads scoring chances off recent team performance,
+# which misses a change the market already knows about (a new QB, a healthier offense). If the two
+# disagree by more than MARKET_TD_BAND, close MARKET_PULL of that gap.
+MARKET_TD_BAND = 0.10        # 10 percentage points
+ATD_MARGIN = 0.08            # rough vig baked into an anytime-TD price
 
 # QB passing yards is deliberately absent: it's the model's weakest market (2-9% skill in backtests
 # vs ~30% for receptions and yards), and the odds feed doesn't price it either.
@@ -352,6 +357,13 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
                     try:
                         if st == "anytime_td":
                             p = K.apply(sim.prob(r.player, st, ln), st, cal)
+                            from odds import implied_prob
+                            mkt = implied_prob(price) / (1 + ATD_MARGIN)
+                            if abs(p - mkt) > MARKET_TD_BAND:
+                                before = p
+                                p = p + (mkt - p) * MARKET_PULL
+                                role_notes.append(f"{r.player} anytime TD: model {before:.0%} vs "
+                                                  f"FanDuel {mkt:.0%} -> using {p:.0%}")
                         else:
                             x = sim.stat(r.player, st)
                             x = x[~np.isnan(x)] if hasattr(x, "__len__") else x
@@ -379,7 +391,7 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
                 if 0.45 < b["prob"] < 0.85:
                     stat = "anytime_td" if "TD" in b["bet"] else b["bet"].split("+ ")[1].replace(" ", "_")
                     ln = 0.5 if "TD" in b["bet"] else float(b["bet"].split("+")[0]) - 0.5
-                    legs.append({"desc": f"{pl['name']} {b['bet']}",
+                    legs.append({"desc": f"{pl['name']} {b['bet']}", "book": b.get("book"),
                                  "leg": {"player": pl["name"], "stat": stat, "line": ln}, "p": b["prob"]})
         legs = sorted(legs, key=lambda x: -x["p"])[:8]
         combos = []
@@ -388,8 +400,16 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
                 if len({(l["leg"]["player"], l["leg"]["stat"]) for l in c}) < k:
                     continue
                 r = E.price_parlay(sim, [l["leg"] for l in c], cal=cal)
-                combos.append({"legs": [l["desc"] for l in c], "prob": r["p_joint"],
-                               "fair": r["fair_american"], "correlation_lift": r["correlation_lift"]})
+                entry = {"legs": [l["desc"] for l in c], "prob": r["p_joint"],
+                         "fair": r["fair_american"], "correlation_lift": r["correlation_lift"]}
+                books = [l.get("book") for l in c]
+                if all(b is not None for b in books):
+                    from odds import american_to_decimal
+                    dec = 1.0
+                    for b in books:
+                        dec *= american_to_decimal(b)
+                    entry["book_price"] = decimal_to_american(dec)   # straight-parlay math
+                combos.append(entry)
         game["parlays"] = sorted(combos, key=lambda x: -x["prob"])[:6]
         out["games"].append(game)
         print(f"  {g.away_team}@{g.home_team}", flush=True)

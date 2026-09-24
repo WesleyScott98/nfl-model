@@ -385,7 +385,7 @@ function parlayHTML(p){
       <div class="big ${cls}">${pct(p.prob)}</div></div>
     <div class="meter ${cls}"><i style="--w:${Math.round(p.prob*100)}%"></i></div>
     <div class="why"><span class="pill ${cls}">${label(p.prob)}</span><span>${p.game}</span>
-      <span>both legs · worth about <b>${odds(p.fair)}</b></span></div></div>`;
+      <span>${p.book_price !== undefined ? `FanDuel pays about <b>${odds(p.book_price)}</b> · ` : ""}both legs · worth <b>${odds(p.fair)}</b></span></div></div>`;
 }
 function bestPerPlayer(list){
   const seen = new Set();
