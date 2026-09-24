@@ -148,7 +148,8 @@ def team_profiles(pbp: pd.DataFrame, season: int, week: int) -> pd.DataFrame:
 # player usage
 # ----------------------------------------------------------------------------
 def player_usage(pbp: pd.DataFrame, snaps: pd.DataFrame, season: int, week: int,
-                 info: pd.DataFrame = None, inj: pd.DataFrame = None) -> pd.DataFrame:
+                 info: pd.DataFrame = None, inj: pd.DataFrame = None,
+                 qb_map: dict = None) -> pd.DataFrame:
     df = _cutoff(pbp, season, week)
     df = df[((df["pass"] == 1) | (df["rush"] == 1)) & (df["two_point_attempt"] != 1)
             & (df.get("qb_kneel", 0) != 1) & (df.get("qb_spike", 0) != 1)].copy()
@@ -218,6 +219,16 @@ def player_usage(pbp: pd.DataFrame, snaps: pd.DataFrame, season: int, week: int,
     team_w = np.where(pg["posteam"] == pg["pid"].map(cur_team), 1.0, C.PRIOR_TEAM_WEIGHT)
     pg["games_ago"] = pg.groupby("pid").cumcount(ascending=False)
     pg["w"] = (0.5 ** (pg["games_ago"] / C.USAGE_HALF_LIFE_GAMES)) * _season_weight(pg, season, week).values * team_w * pg["short_w"].values
+    # weight games by whether this week's starting QB was the one throwing
+    if qb_map:
+        passers = (df[df["passer_player_id"].notna()]
+                   .groupby(["game_id", "posteam"])["passer_player_id"]
+                   .agg(lambda s: s.value_counts().idxmax()).rename("game_qb").reset_index())
+        pg = pg.merge(passers, on=["game_id", "posteam"], how="left")
+        want = pg["posteam"].map(qb_map)
+        ctx = np.where(want.isna() | pg["game_qb"].isna(), 1.0,
+                       np.where(pg["game_qb"] == want, C.QB_CONTEXT_MATCH, C.QB_CONTEXT_MISMATCH))
+        pg["w"] = pg["w"] * ctx
 
     raw = {c: (pg[n] / pg[d].replace(0, np.nan)).fillna(0) * pg["short_scale"] for c, n, d in
            [("s_tgt", "tgt", "team_tgt"), ("s_car", "car", "team_car"), ("s_rz", "rz_tgt", "team_rz_tgt"),
@@ -290,8 +301,13 @@ def player_usage(pbp: pd.DataFrame, snaps: pd.DataFrame, season: int, week: int,
     k = agg["pos"].map(lambda p: getattr(C, "SHARE_PRIOR_GAMES_BY_POS", {}).get(p, C.SHARE_PRIOR_GAMES))
     pt = agg["pos"].map(lambda p: C.SHARE_PRIORS.get(p, (0.08, 0.0))[0])
     pc = agg["pos"].map(lambda p: C.SHARE_PRIORS.get(p, (0.08, 0.0))[1])
-    for c, prior in [("s_tgt", pt), ("s_rz", pt), ("s_car", pc), ("s_gl", pc)]:
+    for c, prior in [("s_tgt", pt), ("s_car", pc)]:
         agg[c] = (agg[c] * agg["neff"] + prior * k) / (agg["neff"] + k)
+    # Red-zone and goal-line shares are thin for most players, so when the evidence is light they
+    # shrink toward that player's OWN overall usage — not a flat league average. Shrinking a
+    # fourth-string back's goal-line share toward 25% invented goal-line roles that don't exist.
+    for c, own in [("s_rz", agg["s_tgt"]), ("s_gl", agg["s_car"])]:
+        agg[c] = (agg[c] * agg["neff"] + own * C.RZ_SHARE_PRIOR_GAMES) / (agg["neff"] + C.RZ_SHARE_PRIOR_GAMES)
 
     # efficiency shrunk toward position-group means
     for pos, grp in agg.groupby("pos"):
@@ -333,15 +349,13 @@ def active_usage(usage: pd.DataFrame, team: str, out_ids=(), out_names=(), snap_
     # Shares estimated in different contexts rarely sum to 1. Remove any excess from the LEAST
     # reliable estimates first (weight share / effective games), so a star with a long track
     # record isn't scaled down as hard as a one-game sample.
-    rel = u["neff"].clip(lower=0.5)
+    # Scale proportionally when the shares overshoot. An earlier version took more from the
+    # least-reliable estimates, which sounded sensible but flattened real differences between
+    # players — a receiver whose share genuinely rose ended up back where he started.
     for c, cap in [("s_tgt", 0.97), ("s_car", 0.98), ("s_rz", 0.97), ("s_gl", 0.98)]:
-        for _ in range(3):
-            excess = u[c].sum() - cap
-            if excess <= 1e-6:
-                break
-            wgt = u[c] / rel
-            cut = (excess * wgt / wgt.sum()).clip(upper=0.7 * u[c])
-            u[c] = u[c] - cut
+        tot = u[c].sum()
+        if tot > cap:
+            u[c] = u[c] * (cap / tot)
     return u
 
 

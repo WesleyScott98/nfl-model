@@ -27,6 +27,14 @@ SHORT_GAME_ALPHA = 0.5
 PRIOR_TEAM_WEIGHT = 0.5
 # Shares shrink toward a position prior with this many pseudo-games (tames one-game samples).
 SHARE_PRIOR_GAMES = 1.0
+# Red-zone / goal-line shares shrink toward the player's own overall usage with this weight.
+RZ_SHARE_PRIOR_GAMES = 2.0
+# When this week's starting QB isn't the one who played recently, games with HIM count for more and
+# games with the other guy count for less. Drake London with Penix in 2025: 9.4 targets, 77 yds a
+# game; with Cooper Rush in 2026: 4.5 and 40. Weighting those equally projects a player who doesn't
+# exist. Applies to pass-catchers only.
+QB_CONTEXT_MATCH = 1.8       # games the projected starter actually played
+QB_CONTEXT_MISMATCH = 0.5    # games a different QB played
 # Per-position shrinkage. QB carry share is highly individual (a runner vs a pocket passer), so
 # shrinking it toward a league prior compressed rushing projections badly: pocket QBs were
 # projected 13.9 yds against an actual 1.7, runners 27.5 against an actual 45.8 (2025).

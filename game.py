@@ -35,8 +35,9 @@ class Model:
         self._wx_text = self.pbp.groupby("game_id")["weather"].first().to_dict()
         self._cache = {}
 
-    def features(self, week):
-        if week not in self._cache:
+    def features(self, week, qb_map=None):
+        key = (week, tuple(sorted((qb_map or {}).items())))
+        if key not in self._cache:
             tp = F.team_profiles(self.pbp, self.season, week)
             dp = D.defense_profiles(self.pbp, self.info, self.season, week)
             try:
@@ -47,11 +48,12 @@ class Model:
             attrs = {**tp.attrs, **dp.attrs}
             tp = tp.join(dp)
             tp.attrs = attrs
-            u = F.player_usage(self.pbp, self.snaps, self.season, week, self.info)
+            u = F.player_usage(self.pbp, self.snaps, self.season, week, self.info,
+                               self.inj_all, qb_map)
             sh = D.player_shell_splits(self.pbp, self.snaps, self.season, week)
             u = u.merge(sh, on="pid", how="left").fillna({"s2r": 1.0, "s1r": 1.0})
-            self._cache[week] = (tp, u)
-        return self._cache[week]
+            self._cache[key] = (tp, u)
+        return self._cache[key]
 
     def game_row(self, away, home, week):
         g = self.sched[(self.sched["week"] == week) & (self.sched["home_team"] == home) & (self.sched["away_team"] == away)]
@@ -190,6 +192,23 @@ class Model:
         q = {k: v for k, v in q.items() if k.lower() not in outs_lower and v < 1}
 
         qb_named = {k: v for k, v in (qb or {}).items()}
+
+        qb_ids = {}
+        for t in (home, away):
+            nm = qb_named.get(t)
+            if nm:
+                row = usage[usage["full_name"].str.lower() == nm.lower()]
+                if len(row):
+                    qb_ids[t] = row["pid"].iloc[0]
+            else:
+                pid = F.primary_qb(self.pbp, t, self.season, week, outs, out_names)
+                if pid:
+                    qb_ids[t] = pid
+        if qb_ids and getattr(C, "QB_CONTEXT_MATCH", 1) != 1:
+            tp2, usage2 = self.features(week, qb_ids)
+            usage = usage2
+            if not def_adjust and not auto_def:
+                tp = tp2
 
         def run(extra_out, n_, seed_):
             ins = {}

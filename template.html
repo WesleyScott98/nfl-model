@@ -411,10 +411,17 @@ function heroHTML(p){
     </svg></div>`;
 }
 let kind = "all";
+function spreadAcrossGames(list, perGame = 2){
+  const count = {};
+  return list.filter(x => {
+    count[x.game] = (count[x.game] || 0) + 1;
+    return count[x.game] <= perGame;         // keeps one matchup from filling the whole board
+  });
+}
 function drawTop(){
-  const all = bestPerPlayer(kind === "all" ? ALL
+  const all = spreadAcrossGames(bestPerPlayer(kind === "all" ? ALL
     : kind === "value" ? ALL.filter(p => p.value).sort((a,b) => b.ev - a.ev)
-    : ALL.filter(p => kindOf(p.bet) === kind));
+    : ALL.filter(p => kindOf(p.bet) === kind)));
   document.getElementById("hero").innerHTML = all.length ? heroHTML(all[0]) : "";
   const l = all.slice(1, 13);
   document.getElementById("top").innerHTML = l.length ? l.map(p => cardHTML(p)).join("")
