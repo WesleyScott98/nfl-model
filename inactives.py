@@ -64,6 +64,46 @@ def _fetch(cache_dir):
     raise RuntimeError(last)
 
 
+def depth_starters(cache_dir, quiet=False):
+    """{team: {"QB": "Name", "RB": "Name", ...}} from Sleeper's depth-chart order.
+
+    The model infers roles from box scores, so it lags an announced change (a new starting QB, a
+    benching, a trade). The depth chart reflects the change immediately. Used to name the starting
+    QB; your overrides.json still wins if you set one."""
+    try:
+        players = _fetch(cache_dir)
+    except Exception as ex:
+        print(f"[sleeper] depth chart unavailable ({ex})")
+        return {}
+    best = {}
+    for p in players.values():
+        if not isinstance(p, dict):
+            continue
+        team, pos, order = p.get("team"), p.get("depth_chart_position") or p.get("position"), p.get("depth_chart_order")
+        if not team or not pos or order is None:
+            continue
+        try:
+            order = int(order)
+        except (TypeError, ValueError):
+            continue
+        status_bad = str(p.get("injury_status") or "").strip().lower() in OUT_STATUS \
+            or str(p.get("status") or "").strip().lower() in OUT_ROSTER
+        if status_bad:
+            continue
+        full = p.get("full_name") or " ".join(filter(None, [p.get("first_name"), p.get("last_name")]))
+        tm = TEAM_FIX.get(team, team)
+        cur = best.get((tm, pos))
+        if cur is None or order < cur[0]:
+            best[(tm, pos)] = (order, full)
+    out = {}
+    for (tm, pos), (_, name) in best.items():
+        out.setdefault(tm, {})[pos] = name
+    if not quiet:
+        qbs = {t: v.get("QB") for t, v in out.items() if v.get("QB")}
+        print(f"[sleeper] depth chart read for {len(out)} teams ({len(qbs)} starting QBs)")
+    return out
+
+
 def availability(cache_dir, usage=None, quiet=False):
     """-> (out_names, questionable{name: p_play}) for players the model actually projects.
 

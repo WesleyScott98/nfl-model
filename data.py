@@ -181,3 +181,19 @@ def roster_status(season):
     SUS suspended, CUT released, RET retired, DEV practice squad, INA game-day inactive."""
     df = _cached("rostw", season, nfl.load_rosters_weekly)
     return df[["season", "week", "team", "gsis_id", "full_name", "status"]]
+
+
+def defense_snaps(seasons):
+    """Defensive snap share per player-week, with position group (DB = corners/safeties,
+    FRONT = line and linebackers). Used to size how much of a defense is missing."""
+    import numpy as np
+    df = pd.concat([_cached("snaps", s, nfl.load_snap_counts) for s in seasons], ignore_index=True)
+    df = df[(df["game_type"] == "REG") & df["defense_pct"].notna()]
+    info = _cached("players", 0, lambda _: nfl.load_players())[["gsis_id", "pfr_id", "position"]].dropna(subset=["pfr_id"])
+    df = df.drop(columns=["position"], errors="ignore")          # snap table has its own; use the roster one
+    df = df.merge(info, left_on="pfr_player_id", right_on="pfr_id", how="inner")
+    df["grp"] = np.where(df["position"].isin(["CB", "S", "FS", "SS", "DB"]), "DB",
+                  np.where(df["position"].isin(["DE", "DT", "NT", "DL", "EDGE", "LB", "ILB", "OLB", "MLB"]),
+                           "FRONT", "OTHER"))
+    df = df[df["grp"] != "OTHER"]
+    return df[["season", "week", "team", "gsis_id", "grp", "defense_pct"]]

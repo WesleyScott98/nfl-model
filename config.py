@@ -112,3 +112,14 @@ TEASER_DOG_RANGE = (1.5, 2.5)     # 6-pt teaser legs that still clear breakeven 
 # vs 1.7 actual; runners 27.5 vs 45.8, 2025). A QB's own recent rushing average was more accurate
 # (MAE 12.7 vs 13.4, bias -0.1 vs +3.8), so the QB's rushing is blended toward it.
 QB_RUSH_TRAIL_WEIGHT = 0.75   # tuned: best Brier, QB rush MAE 13.55 -> 12.43
+
+# ---- defensive injuries: a defense missing starters gives up more.
+# Sized by judgement, NOT measured — the multiplier is applied to how many yards that defense
+# allows, scaled by the share of its normal defensive snaps that are out. "1.0 missing" means a
+# full-time starter's worth of snaps. Validate against past seasons before trusting it heavily.
+AUTO_DEF_ADJUST = True
+DEF_INJURY_DB_YPT = 0.05        # +5% yards per target per starter-equivalent DB missing
+DEF_INJURY_DB_CMP = 0.015       # +1.5% completion rate likewise
+DEF_INJURY_FRONT_YPC = 0.045    # +4.5% yards per carry per starter-equivalent front-seven missing
+DEF_INJURY_FRONT_YPT = 0.015    # pass rush matters for the pass game too, a little
+DEF_INJURY_CAP = 0.15           # never swing a defense by more than 15%

@@ -40,8 +40,10 @@ PROP_MARKETS = ["player_anytime_td", "player_receptions", "player_reception_yds"
 STAT_TO_MARKET = {"receptions": "receptions", "rec_yds": "rec_yds", "rush_yds": "rush_yds",
                   "anytime TD": "anytime_td"}
 
+# QB passing yards is deliberately absent: it's the model's weakest market (2-9% skill in backtests
+# vs ~30% for receptions and yards), and the odds feed doesn't price it either.
 LINES = {"receptions": [2.5, 3.5, 4.5, 5.5], "rec_yds": [39.5, 49.5, 59.5, 69.5, 79.5],
-         "rush_yds": [39.5, 49.5, 59.5, 74.5, 89.5], "pass_yds": [199.5, 224.5, 249.5, 274.5]}
+         "rush_yds": [39.5, 49.5, 59.5, 74.5, 89.5]}
 PRICE_FLOOR = -350             # singles shorter than this are dropped by the page anyway
 
 
@@ -130,16 +132,19 @@ def load_overrides(here):
     "questionable": {"Name": 0.6}, "snap_limit": {"Name": 0.5}}."""
     path = os.path.join(here, "overrides.json")
     if not os.path.exists(path):
-        return [], {}, {}
+        return [], {}, {}, {}
     try:
         o = json.load(open(path))
         out = [n for n in o.get("out", []) if isinstance(n, str)]
         if out:
             print(f"overrides: forcing out {', '.join(out)}")
-        return out, o.get("questionable", {}), o.get("snap_limit", {})
+        qb = {k: v for k, v in (o.get("qb") or {}).items() if isinstance(v, str)}
+        if qb:
+            print("overrides: named starting QBs " + ", ".join(f"{k}={v}" for k, v in qb.items()))
+        return out, o.get("questionable", {}), o.get("snap_limit", {}), qb
     except Exception as ex:
         print(f"overrides.json unreadable ({ex}); ignoring")
-        return [], {}, {}
+        return [], {}, {}, {}
 
 
 def auto_injury_watch(m, week):
@@ -178,16 +183,23 @@ def auto_injury_watch(m, week):
     return auto
 
 
-def build(season, week, n_sims=20000, overrides=([], {}, {})):
+def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     m = Model(season)
     cal = K.load()
     this_week = {f"{g.away_team}@{g.home_team}" for g in m.sched[m.sched["week"] == week].itertuples()}
     book = fetch_odds(this_week)
-    out_names, questionable, snap_limit = overrides
+    out_names, questionable, snap_limit, qb_named = overrides
+    qb_named = dict(qb_named)                      # your overrides stay on top of anything automatic
     auto_q = auto_injury_watch(m, week) or {}
     # live availability (Sleeper) closes the gap between Friday's report and kickoff
-    live_out, live_q = IN.availability(os.environ.get("NFL_EDGE_CACHE", "/tmp/nfl-cache"),
-                                      m.features(week)[1])
+    cache = os.environ.get("NFL_EDGE_CACHE", "/tmp/nfl-cache")
+    live_out, live_q = IN.availability(cache, m.features(week)[1])
+    # the depth chart names the starting QB when it disagrees with whoever took the snaps last week
+    depth = IN.depth_starters(cache)
+    for tm, roles in depth.items():
+        qb_name = roles.get("QB")
+        if qb_name and tm not in qb_named:
+            qb_named[tm] = qb_name
     out_names = list(dict.fromkeys(list(out_names) + live_out))
     questionable = {**auto_q, **live_q, **questionable}   # live beats auto; your overrides beat both
     fair = lambda p: decimal_to_american(1 / max(min(p, 0.97), 0.02))
@@ -204,7 +216,8 @@ def build(season, week, n_sims=20000, overrides=([], {}, {})):
         if bk["lines"].get("total", {}).get("over"):
             tot_line = float(bk["lines"]["total"]["over"][0])
         sim = m.simulate(g.away_team, g.home_team, week, sp_line, tot_line, n=n_sims,
-                         out_names=out_names, questionable=questionable, snap_override=snap_limit)
+                         out_names=out_names, questionable=questionable, snap_override=snap_limit,
+                         qb=qb_named)
         s = sim.summary()
         mar = sim.points[g.home_team] - sim.points[g.away_team]
         tot = sim.points[g.home_team] + sim.points[g.away_team]
@@ -233,8 +246,6 @@ def build(season, week, n_sims=20000, overrides=([], {}, {})):
             if p_td > 0.08:
                 pl["bets"].append({"bet": "anytime TD", "prob": round(p_td, 3), "fair": fair(p_td)})
             for stat, lines in LINES.items():
-                if stat == "pass_yds" and r.pos != "QB":
-                    continue
                 if stat in ("receptions", "rec_yds") and r.targets_mean < 2.5:
                     continue
                 if stat == "rush_yds" and r.carries_mean < 4:

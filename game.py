@@ -78,6 +78,42 @@ class Model:
             unsigned = {pid for pid in u.index if pid not in on_roster}
         return bad | moved | unsigned
 
+    def def_injury_adjust(self, week, out_ids):
+        """How much worse each defense should be, from the share of its normal defensive snaps that
+        are unavailable. Returns {team: {"def_ypt": mult, "def_ypc": mult, "def_cmp_rate": mult}}."""
+        if not getattr(C, "AUTO_DEF_ADJUST", False):
+            return {}
+        try:
+            ds = self.dsnaps
+        except AttributeError:
+            try:
+                self.dsnaps = ds = data.defense_snaps(list(range(self.season - 1, self.season + 1)))
+            except Exception:
+                self.dsnaps = ds = None
+        if ds is None or ds.empty:
+            return {}
+        prior = ds[(ds["season"] == self.season) & (ds["week"] < week)]
+        if prior.empty:
+            prior = ds[ds["season"] == self.season - 1]
+        if prior.empty:
+            return {}
+        # a player's normal role = his average defensive snap share so far
+        usual = prior.groupby(["team", "gsis_id", "grp"])["defense_pct"].mean().reset_index()
+        missing = usual[usual["gsis_id"].isin(out_ids)]
+        if missing.empty:
+            return {}
+        adj = {}
+        for (team, grp), grp_rows in missing.groupby(["team", "grp"]):
+            lost = float(grp_rows["defense_pct"].sum())      # in starter-equivalents
+            d = adj.setdefault(team, {})
+            if grp == "DB":
+                d["def_ypt"] = d.get("def_ypt", 1.0) + min(C.DEF_INJURY_DB_YPT * lost, C.DEF_INJURY_CAP)
+                d["def_cmp_rate"] = d.get("def_cmp_rate", 1.0) + min(C.DEF_INJURY_DB_CMP * lost, C.DEF_INJURY_CAP)
+            else:
+                d["def_ypc"] = d.get("def_ypc", 1.0) + min(C.DEF_INJURY_FRONT_YPC * lost, C.DEF_INJURY_CAP)
+                d["def_ypt"] = d.get("def_ypt", 1.0) + min(C.DEF_INJURY_FRONT_YPT * lost, C.DEF_INJURY_CAP)
+        return adj
+
     def weather_for(self, g, home):
         if g is None:
             return None
@@ -98,12 +134,15 @@ class Model:
 
     def simulate(self, away, home, week, spread_home=None, total=None, out_names=(),
                  use_injury_report=True, snap_override=None, questionable=None,
-                 weather="auto", def_adjust=None, n=C.N_SIMS, seed=7):
+                 weather="auto", def_adjust=None, qb=None, n=C.N_SIMS, seed=7):
         """spread_home: home team's margin as favourite (Rams -6.5 -> 6.5); defaults to schedule.
         questionable: {name: P(plays)} — merged with the injury report (report default
         C.P_PLAY_QUESTIONABLE). weather: "auto" (observed/forecast), None, or a dict.
         def_adjust: {team: {"def_ypt"|"def_ypc"|"def_cmp_rate": multiplier}} for defensive injuries."""
         tp, usage = self.features(week)
+        auto_def = {}
+        if def_adjust is None or getattr(C, "AUTO_DEF_ADJUST", False):
+            pass  # filled in below once we know who's out
         if def_adjust:
             tp = tp.copy()
             tp.attrs = self.features(week)[0].attrs
@@ -117,6 +156,21 @@ class Model:
             total = float(g["total_line"]) if g is not None else 44.0
         outs = F.injury_outs(self.inj, self.season, week) if use_injury_report else set()
         outs = outs | self.unavailable(week, usage)
+        # resolve any full names you passed (overrides, live feed) to player ids, so they also
+        # apply where the data only has abbreviated names like "C.Rush" — e.g. picking the starting QB
+        if out_names:
+            low = {n.lower() for n in out_names}
+            outs = outs | set(usage.loc[usage["full_name"].str.lower().isin(low), "pid"])
+        auto_def = self.def_injury_adjust(week, outs)
+        if auto_def:
+            tp = tp.copy(); tp.attrs = self.features(week)[0].attrs
+            for t, mults in auto_def.items():
+                if t not in (home, away) or t not in tp.index:
+                    continue
+                for col, mult in mults.items():
+                    tp.loc[t, col] *= mult
+                shown = ", ".join(f"{k.replace('def_','')} x{v:.2f}" for k, v in mults.items())
+                print(f"[defense out] {t} weakened: {shown}")
         wx = self.weather_for(g, home) if weather == "auto" else weather
 
         # questionable players -> probability of playing
@@ -130,9 +184,24 @@ class Model:
         outs_lower = {o.lower() for o in out_names}
         q = {k: v for k, v in q.items() if k.lower() not in outs_lower and v < 1}
 
+        qb_named = {k: v for k, v in (qb or {}).items()}
+
         def run(extra_out, n_, seed_):
-            ins = {t: self._team_inputs(usage, t, week, outs, list(out_names) + extra_out, snap_override)
-                   for t in (home, away)}
+            ins = {}
+            for t in (home, away):
+                u, q = self._team_inputs(usage, t, week, outs, list(out_names) + extra_out, snap_override)
+                # an announced starter (overrides.json "qb") beats whoever took the snaps last week
+                named = qb_named.get(t)
+                if named:
+                    row = usage[usage["full_name"].str.lower() == named.lower()]
+                    if len(row):
+                        q = row["pid"].iloc[0]
+                        if q not in set(u["pid"]):
+                            u = pd.concat([u, row])
+                        u = u[(u["pos"] != "QB") | (u["pid"] == q)]
+                    else:
+                        print(f"[qb override] {named} not found in usage data for {t}; leaving the model's pick")
+                ins[t] = (u, q)
             return simulate_game(home, away, spread_home, total, tp, ins[home][0], ins[away][0],
                                  ins[home][1], ins[away][1], n=n_, seed=seed_, weather=wx)
 

@@ -1,6 +1,13 @@
 {
-  "_comment": "Manual corrections for news the data feed hasn't caught up with. Injury reports publish Wednesday, so a Monday-night injury is invisible until then. Edit this file, commit, and the next build uses it.",
-  "out": [],
+  "_comment": "Manual corrections for news the data feeds haven't caught. The model reads box scores, so an announced QB change needs a line here. Edit, commit, next build uses it.",
+  "out": [
+    "Cooper Rush",
+    "Jack Strand"
+  ],
+  "qb": {
+    "ATL": "Michael Penix Jr."
+  },
+  "_note": "Falcons named Penix the Week 3 starter (announced Mon); Rush may be inactive.",
   "questionable": {},
   "snap_limit": {}
 }
