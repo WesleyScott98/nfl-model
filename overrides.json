@@ -1,0 +1,12 @@
+{
+  "_comment": "Manual corrections. The build now reads player news automatically (see news.py), but anything you set here always wins.",
+  "out": [],
+  "qb": {},
+  "questionable": {
+    "Zay Flowers": 0.5
+  },
+  "snap_limit": {
+    "Zay Flowers": 0.6
+  },
+  "_note": "Flowers (hamstring) questionable and reported on a snap count if active (Fowler, 9/26). Bateman benefits. Clear this once he plays a normal game."
+}

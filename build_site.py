@@ -21,6 +21,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # flat layout: all files in one folder
 import calibrate as K          # noqa: E402
 import inactives as IN         # noqa: E402
+import news as NEWS            # noqa: E402
 import edge as E               # noqa: E402
 from game import Model         # noqa: E402
 from odds import decimal_to_american  # noqa: E402
@@ -274,6 +275,11 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     # live availability (Sleeper) closes the gap between Friday's report and kickoff
     cache = os.environ.get("NFL_EDGE_CACHE", "/tmp/nfl-cache")
     live_out, live_q = IN.availability(cache, m.features(week)[1])
+    # beat reporting: snap counts, game-time decisions and "ruled out" before the report says so
+    news_out, news_q, news_limits = NEWS.combined_news(cache, m.features(week)[1], week)
+    live_out = list(dict.fromkeys(list(live_out) + news_out))
+    live_q = {**live_q, **news_q}
+    snap_limit = {**news_limits, **(snap_limit or {})}      # your overrides still win
     # the depth chart names the starting QB when it disagrees with whoever took the snaps last week
     depth = IN.depth_starters(cache)
     for tm, roles in depth.items():
