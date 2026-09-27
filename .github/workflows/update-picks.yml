@@ -1,31 +1,24 @@
 name: Update picks
 
-# All times UTC (Eastern is UTC-4 until Nov 1, then UTC-5 — everything shifts an hour earlier in ET).
+# Times are UTC (Eastern is UTC-4 until Nov 1, then UTC-5).
 #
-#   DAY-BEFORE runs pull player props, since that's when you place bets:
-#     Wed 00:00 Thu (8pm ET Wed)  -> Thursday night game
-#     Sat 17:00    (1pm ET)       -> the whole Sunday slate
-#     Sun 00:00 Mon (8pm ET Sun)  -> Monday night game
-#
-#   PRE-KICKOFF runs (~90 min out) refresh spreads, totals and moneylines only — cheap, and
-#   prop prices barely move in the last hour anyway:
-#     Thu 22:45 (6:45pm ET), Sun 15:30 (11:30am ET), Sun 18:45 (2:45pm ET),
-#     Sun 22:50 (6:50pm ET), Mon 22:45 (6:45pm ET)
-#
-#   Wed 15:00 (11am ET) picks up the new week's schedule, injuries and roster moves.
-#
-# Budget: ~91 credits/week, ~390/month of the free 500.
+# Props are now decided PER GAME, not per run: any game inside ~36 hours of kickoff whose prices
+# haven't been pulled in the last 20 hours gets them, plus one final pull inside 4 hours. So if
+# GitHub skips or delays a scheduled run — which it does on the free tier — the next run catches
+# up instead of the slate going priceless. Runs are therefore cheap and redundant on purpose.
 on:
   schedule:
-    - cron: "0 15 * * 3"      # Wed 11am ET  — new week's data, lines
-    - cron: "0 0 * * 4"       # Wed 8pm ET   — TNF, day before, props
-    - cron: "45 22 * * 4"     # Thu 6:45pm ET — TNF, ~90 min out, lines
-    - cron: "0 17 * * 6"      # Sat 1pm ET   — Sunday slate, day before, props
-    - cron: "30 15 * * 0"     # Sun 11:30am ET — 1pm games, ~90 min out, lines
-    - cron: "45 18 * * 0"     # Sun 2:45pm ET  — 4pm games, ~90 min out, lines
-    - cron: "50 22 * * 0"     # Sun 6:50pm ET  — SNF, ~90 min out, lines
-    - cron: "0 0 * * 1"       # Sun 8pm ET   — MNF, day before, props
-    - cron: "45 22 * * 1"     # Mon 6:45pm ET — MNF, ~90 min out, lines
+    - cron: "0 15 * * 3"      # Wed 11am ET  — new week's data and lines
+    - cron: "0 0 * * 4"       # Wed 8pm ET   — Thursday game comes into range
+    - cron: "45 22 * * 4"     # Thu 6:45pm ET — final check before Thursday night
+    - cron: "0 17 * * 6"      # Sat 1pm ET   — the Sunday slate comes into range
+    - cron: "0 1 * * 0"       # Sat 9pm ET   — backstop if the 1pm run was skipped
+    - cron: "30 13 * * 0"     # Sun 9:30am ET — backstop, and early inactive news
+    - cron: "30 15 * * 0"     # Sun 11:30am ET — ~90 min before the 1pm games
+    - cron: "45 18 * * 0"     # Sun 2:45pm ET — ~90 min before the 4pm games
+    - cron: "50 22 * * 0"     # Sun 6:50pm ET — ~90 min before Sunday night
+    - cron: "0 0 * * 1"       # Sun 8pm ET   — Monday game comes into range
+    - cron: "45 22 * * 1"     # Mon 6:45pm ET — final check before Monday night
   workflow_dispatch:
 
 permissions:
@@ -50,15 +43,16 @@ jobs:
           NFL_SEASON: "2026"
           NFL_EDGE_CACHE: /tmp/nfl-cache
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          PROPS_WINDOW_HOURS: "30"
-          # props on the three day-before runs and on any manual run; lines only otherwise
-          ODDS_MODE: ${{ contains(fromJSON('["0 0 * * 4","0 17 * * 6","0 0 * * 1",""]'), github.event.schedule) && 'full' || 'lines' }}
+          ODDS_MODE: auto                # decide per game; no dependence on which cron fired
+          PROPS_WINDOW_HOURS: "36"
+          PROPS_REPULL_HOURS: "20"
+          PROPS_FINAL_HOURS: "0"         # set to 4 for a near-kickoff prop refresh (paid odds plan)
         run: python build_site.py --out .
       - name: Commit if anything changed
         run: |
           git config user.name "picks-bot"
           git config user.email "actions@github.com"
-          git add index.html picks.json
+          git add index.html picks.json odds_state.json
           git diff --staged --quiet && echo "nothing changed" && exit 0
           git commit -m "Picks refreshed $(date -u '+%Y-%m-%d %H:%M UTC')"
           for i in 1 2 3; do
