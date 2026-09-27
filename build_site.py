@@ -289,6 +289,16 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
             qb_named[tm] = name
     for nm, p in book_downgrade.items():
         questionable.setdefault(nm, p)
+    # resolve the starting QBs once for the whole slate, so player usage is built a single time
+    base_usage = m.features(week)[1]
+    starters = {}
+    for tm, nm in qb_named.items():
+        row = base_usage[base_usage["full_name"].str.lower() == str(nm).lower()]
+        if len(row):
+            starters[tm] = row["pid"].iloc[0]
+    if starters:
+        m.set_starters(starters)
+        print(f"[qb] usage built in the context of {len(starters)} named starters")
     out_names = list(dict.fromkeys(list(out_names) + live_out))
     questionable = {**auto_q, **live_q, **questionable}   # live beats auto; your overrides beat both
     fair = lambda p: decimal_to_american(1 / max(min(p, 0.97), 0.02))
@@ -334,6 +344,12 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
             p_td = K.apply(sim.prob(r.player, "anytime_td", 0.5), "anytime_td", cal)
             if p_td > 0.08:
                 pl["bets"].append({"bet": "anytime TD", "prob": round(p_td, 3), "fair": fair(p_td)})
+            try:
+                p_ftd = float(sim.stat(r.player, "first_td").mean())
+            except Exception:
+                p_ftd = 0.0
+            if p_ftd > 0.03:
+                pl["bets"].append({"bet": "first TD", "prob": round(p_ftd, 3), "fair": fair(p_ftd)})
             for stat, lines in LINES.items():
                 if stat in ("receptions", "rec_yds") and r.targets_mean < 2.5:
                     continue

@@ -35,7 +35,15 @@ class Model:
         self._wx_text = self.pbp.groupby("game_id")["weather"].first().to_dict()
         self._cache = {}
 
+    def set_starters(self, qb_map):
+        """{team: qb player id} for the whole slate. Set this once before simulating games so the
+        usage table is built a single time instead of once per matchup."""
+        self._starters = dict(qb_map or {})
+        self._cache.clear()
+
     def features(self, week, qb_map=None):
+        if qb_map is None:
+            qb_map = getattr(self, "_starters", None)
         key = (week, tuple(sorted((qb_map or {}).items())))
         if key not in self._cache:
             tp = F.team_profiles(self.pbp, self.season, week)
@@ -152,8 +160,9 @@ class Model:
             return obs
         return data.weather_forecast(home, g["gameday"], g["gametime"])
 
-    def _team_inputs(self, usage, team, week, outs, out_names, snap_override):
-        qb = F.primary_qb(self.pbp, team, self.season, week, outs, out_names)
+    def _team_inputs(self, usage, team, week, outs, out_names, snap_override, qb=None):
+        if qb is None:
+            qb = F.primary_qb(self.pbp, team, self.season, week, outs, out_names)
         u = F.active_usage(usage, team, outs, out_names, snap_override)
         u = u[(u["pos"] != "QB") | (u["pid"] == qb)]
         if qb is not None and qb not in set(u["pid"]):
@@ -237,16 +246,27 @@ class Model:
                 pid = F.primary_qb(self.pbp, t, self.season, week, outs, out_names)
                 if pid:
                     qb_ids[t] = pid
-        if qb_ids and getattr(C, "QB_CONTEXT_MATCH", 1) != 1:
+        known = getattr(self, "_starters", None)
+        if qb_ids and not known and getattr(C, "QB_CONTEXT_MATCH", 1) != 1:
+            # no slate-wide map set, so build this one matchup's context (slower; set_starters is better)
             tp2, usage2 = self.features(week, qb_ids)
             usage = usage2
             if not def_adjust and not auto_def:
                 tp = tp2
 
+        base_qb = {t: F.primary_qb(self.pbp, t, self.season, week, outs, out_names) for t in (home, away)}
+        qb_names_low = {}
+        for t, pid in base_qb.items():
+            row = usage[usage["pid"] == pid]
+            qb_names_low[t] = str(row["full_name"].iloc[0]).lower() if len(row) else None
+
         def run(extra_out, n_, seed_):
             ins = {}
+            extra_low = {str(x).lower() for x in extra_out}
             for t in (home, away):
-                u, q = self._team_inputs(usage, t, week, outs, list(out_names) + extra_out, snap_override)
+                pre = None if (qb_names_low[t] and qb_names_low[t] in extra_low) else base_qb[t]
+                u, q = self._team_inputs(usage, t, week, outs, list(out_names) + extra_out,
+                                         snap_override, pre)
                 # an announced starter (overrides.json "qb") beats whoever took the snaps last week
                 named = qb_named.get(t)
                 if named:

@@ -342,7 +342,19 @@ def active_usage(usage: pd.DataFrame, team: str, out_ids=(), out_names=(), snap_
                | u["full_name"].str.lower().isin(out_names))
     for c in ["s_tgt", "s_car", "s_rz", "s_gl"]:
         lost = u.loc[missing, c].sum()
-        u.loc[~missing, c] = u.loc[~missing, c] / max(1 - lost, 0.2)
+        concentrate = (getattr(C, "CONCENTRATE_VACATED", False) and c in ("s_car", "s_gl")
+                       and lost >= getattr(C, "VACATED_THRESHOLD", 0.35))
+        if concentrate:
+            # hand the vacated carries down the depth order instead of spreading them evenly
+            rbs = u[~missing & u["pos"].isin(["RB", "FB"])].sort_values(c, ascending=False)
+            weights = getattr(C, "VACATED_CONCENTRATION", [0.7, 0.22, 0.08])
+            for i, idx in enumerate(rbs.index):
+                w = weights[i] if i < len(weights) else 0.0
+                u.loc[idx, c] = u.loc[idx, c] + lost * w
+            others = u[~missing & ~u["pos"].isin(["RB", "FB"])].index
+            u.loc[others, c] = u.loc[others, c] / max(1 - lost, 0.2)
+        else:
+            u.loc[~missing, c] = u.loc[~missing, c] / max(1 - lost, 0.2)
     u = u[~missing]
     # keep only meaningful contributors; the remainder becomes an 'other' bucket in the sim
     u = u[(u["s_tgt"] > 0.015) | (u["s_car"] > 0.015)].copy()

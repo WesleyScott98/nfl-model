@@ -245,6 +245,8 @@ def simulate_game(home, away, spread_home, total, tp, usage_home, usage_away, qb
         pass_yds_team = rec_yds.sum(axis=1)
         for i, nm in enumerate(names):
             res.players[nm] = {
+                "td_count": (rec_td[:, i] + rsh_td[:, i]).astype(float),
+                "first_td": np.zeros(n),
                 "targets": targets[:, i], "receptions": rec[:, i], "rec_yds": rec_yds[:, i],
                 "carries": carries[:, i], "rush_yds": rush_yds[:, i],
                 "rush_rec_yds": rec_yds[:, i] + rush_yds[:, i],
@@ -274,6 +276,28 @@ def simulate_game(home, away, spread_home, total, tp, usage_home, usage_away, qb
             q["completions"] = np.round(rec.sum(axis=1) * frac)
             q["rush_yds"] = q["rush_yds"] * frac
             q["carries"] = np.round(q["carries"] * frac)
+    # ---- first touchdown scorer -------------------------------------------------------------
+    # Drive order isn't modelled, so this is an approximation: pick which team scores first in
+    # proportion to how many touchdowns each scored in that simulated game, then pick the scorer
+    # from that team's scorers. Good enough to rank candidates; not a precise timeline.
+    names_by_team = {}
+    for nm, meta in res.meta.items():
+        names_by_team.setdefault(meta["team"], []).append(nm)
+    teams = list(names_by_team)
+    if len(teams) == 2:
+        counts = {t: np.stack([res.players[nm]["td_count"] for nm in names_by_team[t]], axis=1)
+                  for t in teams}
+        totals = {t: counts[t].sum(axis=1) for t in teams}
+        both = totals[teams[0]] + totals[teams[1]]
+        u = rng.random(n)
+        first_is_a = np.where(both > 0, u < np.divide(totals[teams[0]], np.maximum(both, 1e-9)), False)
+        for ti, t in enumerate(teams):
+            mine = first_is_a if ti == 0 else (~first_is_a & (totals[t] > 0))
+            c = counts[t]
+            tot = np.maximum(c.sum(axis=1, keepdims=True), 1e-9)
+            pick = (np.cumsum(c / tot, axis=1) > rng.random(n)[:, None]).argmax(axis=1)
+            for j, nm in enumerate(names_by_team[t]):
+                res.players[nm]["first_td"] = np.where(mine & (pick == j) & (totals[t] > 0), 1.0, 0.0)
     return res
 
 

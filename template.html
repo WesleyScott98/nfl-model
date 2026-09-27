@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NFL Model">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -212,6 +214,7 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
       <button class="chip" data-ex="best bets this week">Best bets</button>
       <button class="chip" data-ex="best parlays">Parlays</button>
       <button class="chip" data-ex="best touchdown picks">Touchdowns</button>
+      <button class="chip" data-ex="best first touchdown scorer">First TD</button>
       <button class="chip" data-ex="longshots with a big payout">Longshots</button>
       <button class="chip" data-ex="best bets for the Thursday night game">Thursday</button>
       <button class="chip" data-ex="best bets for the Monday night game">Monday</button>
@@ -349,15 +352,37 @@ let ALL = [];
 DATA.games.forEach(g => g.players.forEach(p => p.bets.forEach(b =>
   ALL.push({...b, who:p.name, team:p.team, proj:p.proj, score:conviction(b, p.proj),
             game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, gameCode:`${g.away}@${g.home}`, kick:g.kickoff}))));
-const PRICE_FLOOR = -350;              // a single shorter than this risks too much to win too little
+const PRICE_FLOOR = -350;
+const BOARD_EXCLUDE = new Set(["first TD"]);   // shown when asked for, not mixed into the main list              // a single shorter than this risks too much to win too little
 const CHALK = ALL.filter(x => x.fair < PRICE_FLOOR).length;
-ALL = ALL.filter(x => x.fair >= PRICE_FLOOR);
+const FIRST_TD = ALL.filter(x => x.bet === "first TD");
+ALL = ALL.filter(x => x.fair >= PRICE_FLOOR && !BOARD_EXCLUDE.has(x.bet));
 ALL.sort((a,b) => b.score - a.score);
 const PAR = [];
 DATA.games.forEach(g => g.parlays.forEach(p =>
   PAR.push({...p, game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, gameCode:`${g.away}@${g.home}`, kick:g.kickoff})));
 PAR.sort((a,b) => b.prob - a.prob);
-document.getElementById("wk").textContent = `Week ${DATA.week} · ${DATA.games.length} games`;
+(function freshness(){
+  const el = document.getElementById("wk");
+  const built = Date.parse((DATA.generated || "").replace(" UTC", "Z").replace(" ", "T"));
+  let age = "";
+  if (!isNaN(built)) {
+    const hrs = (Date.now() - built) / 36e5;
+    age = hrs < 1 ? " · updated just now"
+        : hrs < 24 ? ` · updated ${Math.round(hrs)}h ago`
+        : ` · updated ${Math.round(hrs / 24)}d ago`;
+    if (hrs > 12) {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = "Check for new picks";
+      b.style.cssText = "margin-top:10px";
+      b.addEventListener("click", () => location.reload(true));
+      const chat = document.querySelector(".chat");
+      if (chat) chat.appendChild(b);
+    }
+  }
+  el.textContent = `Week ${DATA.week} · ${DATA.games.length} games${age}`;
+})();
 
 function projLine(p){
   if (!p || !p.bet) return "";
@@ -523,7 +548,7 @@ const PLAYERS = [...new Set(ALL.map(x => x.who))];
 const LAST = {}; PLAYERS.forEach(n => { const p = n.toLowerCase().split(" ");
   LAST[p[p.length-1]] = n; LAST[n.toLowerCase()] = n; });
 const GAMELINE = /\bspread\b|\bmoneyline\b|\bml\b|\bcover\b|over\s?\/?\s?under|\bo\/u\b|\btotal\b|\bover\b|\bunder\b|who wins|winner|final score|point ?spread|favorite|straight up/;
-const UNSUPPORTED = /\bteaser\b|first touchdown|first td|\bftd\b/;
+const UNSUPPORTED = /\bteaser\b/;
 function readQuestion(q){
   const s = " " + q.toLowerCase().replace(/[^a-z0-9+\s'.-]/g, " ") + " ";
   const teams = Object.keys(TEAMS).filter(t =>
@@ -552,6 +577,7 @@ function readQuestion(q){
              : /receiv|\bwr\b|\bte\b/.test(s) ? "rec"
              : /rush|\brun|ground|carr|\brb\b/.test(s) ? "rush"
              : /pass|throw|\bqb\b/.test(s) ? "pass" : null;
+  const wantsFirst = /first (?:td|touchdown|scorer)|\bftd\b|opening (?:td|touchdown)|scores? first|1st (?:td|touchdown)/.test(s);
   const wantsParlay = /parlay|\bsgp\b|same ?game|combo|multi|stack|build me/.test(s);
   const risk = /longshot|long ?shot|payout|plus ?money|big odds|risky|underdog|\bdog\b|lottery|sprinkle/.test(s) ? "long"
              : /safe|lock|chalk|likely|confident|best chance|banker|sure|solid|cash|hit/.test(s) ? "safe" : "any";
@@ -563,7 +589,7 @@ function readQuestion(q){
   const genericAsk = /\bbest\b|\bpicks?\b|\bbets?\b|\bplays?\b|\btop\b|favou?rite|recommend|what should|give me|anything good/.test(s);
   const understood = !!(teams.length || players.length || day || kind || wantsParlay || gameline
                         || risk !== "any" || genericAsk);
-  return { teams, players, day, kind, wantsParlay, risk, n, legs, gameline, understood,
+  return { teams, players, day, kind, wantsFirst, wantsParlay, risk, n, legs, gameline, understood,
            unsupported: UNSUPPORTED.test(s) };
 }
 function decToAm(d){ return d >= 2 ? "+" + Math.round((d - 1) * 100) : "-" + Math.round(100 / (d - 1)); }
@@ -650,12 +676,17 @@ function answerLocally(q){
       : `<p class="lead">No parlays match that. Try "best parlays".</p>`));
   }
   let l = ALL.filter(inScope);
-  if (f.kind) l = l.filter(x => kindOf(x.bet) === f.kind);
+  if (f.wantsFirst) l = FIRST_TD.filter(inScope).sort((a, b) => b.prob - a.prob);
+  else {
+    l = l.filter(x => x.bet !== "first TD");            // keep them out of general lists
+    if (f.kind) l = l.filter(x => kindOf(x.bet) === f.kind);
+  }
   if (f.risk === "long") l = l.filter(x => x.prob < .55).sort((a,b) => b.score - a.score);
   else if (f.risk === "safe") l = [...l].sort((a,b) => b.prob - a.prob).filter(x => x.prob >= .6);
   l = bestPerPlayer(l).slice(0, f.n);
   if (!l.length) return show(note + `<p class="lead">Nothing rated for that${f.players.length ? " — " + f.players.join(", ") + " may not have a line, or is hurt" : ""}. Try a team, a player, or "best bets".</p>`);
-  const lead = f.risk === "long" ? "Bigger payouts the model still likes"
+  const lead = f.wantsFirst ? "Most likely to score the game's first touchdown"
+             : f.risk === "long" ? "Bigger payouts the model still likes"
              : f.risk === "safe" ? "Most likely to hit" : "Top picks";
   const scope = [f.players.join(" and "), f.teams.map(t => TEAMS[t]).join(" and "),
                  f.day ? dayFull[f.day] : ""].filter(Boolean).join(", ");
