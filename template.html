@@ -348,6 +348,11 @@ function conviction(bet, proj){
   if (!isFinite(line) || !p || line <= 0) return bet.prob;
   return bet.prob * (1 + 0.45 * Math.max(0, Math.min((p - line) / line, 1)));
 }
+// a game that kicked off more than 4 hours ago is finished; hide it until the next build
+DATA.games = DATA.games.filter(g => {
+  const k = Date.parse((g.kickoff || "").replace(" ET", "").replace(" ", "T") + ":00-04:00");
+  return isNaN(k) || (Date.now() - k) < 4 * 3600e3;
+});
 let ALL = [];
 DATA.games.forEach(g => g.players.forEach(p => p.bets.forEach(b =>
   ALL.push({...b, who:p.name, team:p.team, proj:p.proj, score:conviction(b, p.proj),

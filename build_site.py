@@ -305,8 +305,18 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     out = {"season": season, "week": week, "odds": bool(book),
            "generated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()), "games": []}
     sched = m.sched[m.sched["week"] == week]
+    now = datetime.now(timezone.utc)
+    skipped_finished = []
     for g in sched.itertuples():
         if pd.isna(g.spread_line):
+            continue
+        # drop games that have already been played — a finished game's bets are noise
+        played = not pd.isna(getattr(g, "home_score", None))
+        kick = pd.to_datetime(f"{g.gameday} {g.gametime}", errors="coerce")
+        started_long_ago = (kick is not pd.NaT
+                            and (now.replace(tzinfo=None) - kick).total_seconds() > 4 * 3600)
+        if played or started_long_ago:
+            skipped_finished.append(f"{g.away_team}@{g.home_team}")
             continue
         bk = book.get(f"{g.away_team}@{g.home_team}", {"lines": {}, "props": {}})
         sp_line, tot_line = float(g.spread_line), float(g.total_line)
@@ -429,6 +439,8 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
         game["parlays"] = sorted(combos, key=lambda x: -x["prob"])[:6]
         out["games"].append(game)
         print(f"  {g.away_team}@{g.home_team}", flush=True)
+    if skipped_finished:
+        print(f"finished games left out: {', '.join(skipped_finished)}")
     if role_notes:
         print(f"[fanduel] {len(role_notes)} projections pulled toward the market "
               f"(the model had the player's role wrong):")
