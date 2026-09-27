@@ -32,7 +32,16 @@ from odds import decimal_to_american  # noqa: E402
 #   ODDS_MODE=full   -> ~3 + 4 per game  (adds TD / receptions / receiving / rushing props)
 # "full" on a 16-game slate is roughly 67 credits, so budget about 7 full runs a month on the
 # free tier — or run "lines" on the early builds and "full" once near kickoff.
-ODDS_MODE = os.environ.get("ODDS_MODE", "full" if os.environ.get("ODDS_API_KEY") else "off")
+# "auto" (the default) decides per game instead of per run: any game close to kickoff whose props
+# haven't been pulled recently gets them, whichever run happens to fire. That way a skipped or
+# delayed scheduled run is caught by the next one, instead of the slate going priceless all weekend.
+ODDS_MODE = os.environ.get("ODDS_MODE", "auto" if os.environ.get("ODDS_API_KEY") else "off")
+PROPS_REPULL_HOURS = float(os.environ.get("PROPS_REPULL_HOURS", 20))   # don't re-buy the same game
+# A second prop pull near kickoff would cost ~275 extra credits a month, over the free tier's 500.
+# Off by default: set PROPS_FINAL_HOURS=4 if you move to a paid odds plan. Spreads, totals and
+# moneylines still refresh on every run regardless — those cost 3 credits for the whole slate.
+PROPS_FINAL_HOURS = float(os.environ.get("PROPS_FINAL_HOURS", 0))
+STATE_FILE = "odds_state.json"
 # Props cost 4 credits per game (one per market), so only pull them for games kicking off inside
 # this window. At 30 hours, the Saturday-afternoon run covers the whole Sunday slate, the Sunday-
 # evening run covers Monday night, and the Wednesday-evening run covers Thursday night — so prices
@@ -80,7 +89,50 @@ def current_week(model, season):
     return int(upcoming["week"].min()) if len(upcoming) else int(s["week"].max())
 
 
-def fetch_odds(this_week=None):
+def _state(here):
+    try:
+        return json.load(open(os.path.join(here, STATE_FILE)))
+    except Exception:
+        return {}
+
+
+def _save_state(here, state):
+    try:
+        json.dump(state, open(os.path.join(here, STATE_FILE), "w"), indent=1)
+    except Exception as ex:
+        print(f"could not save odds state ({ex})")
+
+
+def _prop_key(p, st, ln):
+    return f"{p}|{st}|{ln}"
+
+
+def _unkey(k):
+    p, st, ln = k.rsplit("|", 2)
+    return (p, st, float(ln))
+
+
+def wants_props(matchup, kick, state, now):
+    """Should this game's player props be pulled on this run?"""
+    if kick is None:
+        return False
+    hrs = (kick - now).total_seconds() / 3600
+    if hrs < 0 or hrs > PROPS_WINDOW_HOURS:
+        return False                                   # already played, or too far out to price
+    entry = state.get(matchup) or {}
+    last = entry.get("pulled") if isinstance(entry, dict) else entry
+    if not last:
+        return True                                    # never pulled: do it now, whatever run this is
+    try:
+        age = (now - datetime.fromisoformat(last)).total_seconds() / 3600
+    except Exception:
+        return True
+    if PROPS_FINAL_HOURS > 0 and hrs <= PROPS_FINAL_HOURS and age >= PROPS_FINAL_HOURS:
+        return True                                    # final refresh near kickoff
+    return age >= PROPS_REPULL_HOURS
+
+
+def fetch_odds(this_week=None, state=None, now=None):
     """FanDuel prices for THIS WEEK's games only, keyed by matchup. Returns {} if there's no key or
     the call fails — the site is fully usable either way."""
     if ODDS_MODE == "off":
@@ -97,7 +149,7 @@ def fetch_odds(this_week=None):
         ev["h"], ev["a"] = ev["home"].map(TEAM_NAMES), ev["away"].map(TEAM_NAMES)
         book = {}
         now = datetime.now(timezone.utc)
-        skipped_other_week = props_pulled = 0
+        skipped_other_week = props_pulled = reused = 0
         for (eid, h, a), grp in ev.groupby(["event_id", "h", "a"]):
             if not h or not a:
                 continue
@@ -113,21 +165,41 @@ def fetch_odds(this_week=None):
                 elif r.market == "totals":
                     entry["lines"].setdefault("total", {})[r.name.lower()] = (r.point, r.price)
             kick = pd.to_datetime(grp["commence"].iloc[0], utc=True, errors="coerce")
-            soon = kick is not pd.NaT and (kick - now).total_seconds() / 3600 <= PROPS_WINDOW_HOURS
-            if ODDS_MODE == "full" and soon:
+            key = f"{a}@{h}"
+            if ODDS_MODE == "auto":
+                take = wants_props(key, None if kick is pd.NaT else kick.to_pydatetime(),
+                                   state or {}, now)
+            else:
+                take = (ODDS_MODE == "full" and kick is not pd.NaT
+                        and (kick - now).total_seconds() / 3600 <= PROPS_WINDOW_HOURS)
+            if not take and state:
+                saved = state.get(key)
+                if isinstance(saved, dict) and saved.get("props"):
+                    for k2, price in saved["props"].items():
+                        try:
+                            entry["props"][_unkey(k2)] = int(price)
+                        except Exception:
+                            continue
+                    reused += 1
+            if take:
                 try:
                     pr = O.player_props(eid, markets=PROP_MARKETS)
                     props_pulled += 1
                     for r in pr.itertuples():
                         if r.side != "over":
                             continue
-                        key = (r.player, r.stat, float(r.line))
-                        entry["props"][key] = int(r.price)
+                        entry["props"][(r.player, r.stat, float(r.line))] = int(r.price)
+                    if state is not None:
+                        # remember the prices themselves, not just that we bought them: a later
+                        # run that correctly declines to re-buy must still be able to show them
+                        state[key] = {"pulled": now.isoformat(timespec="seconds"),
+                                      "props": {_prop_key(p_, st_, ln_): v
+                                                for (p_, st_, ln_), v in entry["props"].items()}}
                 except Exception as ex:
                     print(f"  props unavailable for {a}@{h}: {ex}")
             book[f"{a}@{h}"] = entry
-        print(f"FanDuel odds: {len(book)} games this week, player props for {props_pulled} of them "
-              f"(kicking off within {PROPS_WINDOW_HOURS:g}h), {skipped_other_week} later-week games skipped")
+        print(f"FanDuel odds: {len(book)} games this week | props pulled fresh for {props_pulled}, "
+              f"reused from the last pull for {reused} | {skipped_other_week} later-week games skipped")
         return book
     except Exception as ex:
         print(f"odds unavailable ({ex}); building with model prices only")
@@ -268,7 +340,10 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     m = Model(season)
     cal = K.load()
     this_week = {f"{g.away_team}@{g.home_team}" for g in m.sched[m.sched["week"] == week].itertuples()}
-    book = fetch_odds(this_week)
+    here_dir = os.path.dirname(os.path.abspath(__file__))
+    state = _state(here_dir)
+    book = fetch_odds(this_week, state, datetime.now(timezone.utc))
+    _save_state(here_dir, state)
     out_names, questionable, snap_limit, qb_named = overrides
     qb_named = dict(qb_named)                      # your overrides stay on top of anything automatic
     auto_q = auto_injury_watch(m, week) or {}
