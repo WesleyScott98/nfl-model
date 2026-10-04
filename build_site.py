@@ -406,6 +406,7 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     qb_named = dict(qb_named)                      # your overrides stay on top of anything automatic
     auto_q = auto_injury_watch(m, week) or {}
     prod = production_profile(m, season, week)
+    tp_week = m.features(week)[0]          # team profiles: what each defence allows
     # live availability (Sleeper) closes the gap between Friday's report and kickoff
     cache = os.environ.get("NFL_EDGE_CACHE", "/tmp/nfl-cache")
     live_out, live_q = IN.availability(cache, m.features(week)[1])
@@ -496,7 +497,7 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
                         or getattr(r, "s_tgt", 0) >= 0.17 or getattr(r, "s_car", 0) >= 0.45
                         or r.targets_mean >= 6.0 or r.carries_mean >= 12.0)
             opp = g.home_team if r.team == g.away_team else g.away_team
-            mu = matchup_grade(tp, opp, r.pos)
+            mu = matchup_grade(tp_week, opp, r.pos)
             pl = {"name": r.player, "team": r.team, "pos": r.pos, "star": star, "matchup": mu,
                   "proj": {"rec": round(r.receptions_mean, 1), "rec_yds": round(r.rec_yds_mean, 1),
                            "rush_yds": round(r.rush_yds_mean, 1), "pass_yds": round(r.pass_yds_mean, 1)},
