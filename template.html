@@ -225,7 +225,7 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
   <div class="view on" id="v-picks">
     <h3>Best bets</h3>
     <p class="note">Ranked by how strongly the model likes them, not by the odds offered.
-      Bets priced shorter than −350 are left out — too much risk for the return.</p>
+      Bets priced shorter than −200 are left out — too much risk for the return.</p>
     <p class="note" id="pricenote"></p>
     <div class="filters" id="filters">
       <button data-k="all" aria-pressed="true">Everything</button>
@@ -271,8 +271,9 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
       <p style="margin:0 0 10px"><b>FanDuel's price</b> is shown next to the model's fair price when
         it's available. A <b>VALUE</b> badge means FanDuel is paying more than the bet is worth —
         those are the ones worth taking.</p>
-      <p style="margin:0 0 10px"><b>Nothing shorter than −350</b> is listed as a single bet. A −800
-        favorite risks 8 units to win 1 — fine as a parlay leg, poor on its own.</p>
+      <p style="margin:0 0 10px"><b>Nothing shorter than −200</b> is listed as a single bet. At −200
+        you risk two units to win one, which is about the limit worth paying on a single bet. Short
+        prices are still fine as parlay legs — that's what the Parlays tab is for.</p>
       <p style="margin:0"><b>Spreads and totals</b> are the hardest bets to beat, so the model tracks
         FanDuel there instead of guessing. Player bets are where it has an opinion.</p>
     </div>
@@ -357,11 +358,13 @@ let ALL = [];
 DATA.games.forEach(g => g.players.forEach(p => p.bets.forEach(b =>
   ALL.push({...b, who:p.name, team:p.team, proj:p.proj, score:conviction(b, p.proj),
             game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, gameCode:`${g.away}@${g.home}`, kick:g.kickoff}))));
-const PRICE_FLOOR = -350;
+const PRICE_FLOOR = -200;   // nothing shorter than this: at -200 you risk 2 to win 1, which is
+                            // about as much as a single bet is worth paying
 const BOARD_EXCLUDE = new Set(["first TD"]);   // shown when asked for, not mixed into the main list              // a single shorter than this risks too much to win too little
 const CHALK = ALL.filter(x => x.fair < PRICE_FLOOR).length;
 const FIRST_TD = ALL.filter(x => x.bet === "first TD");
-ALL = ALL.filter(x => x.fair >= PRICE_FLOOR && !BOARD_EXCLUDE.has(x.bet));
+const shownPrice = x => (x.book !== undefined ? x.book : x.fair);
+ALL = ALL.filter(x => shownPrice(x) >= PRICE_FLOOR && !BOARD_EXCLUDE.has(x.bet));
 ALL.sort((a,b) => b.score - a.score);
 const PAR = [];
 DATA.games.forEach(g => g.parlays.forEach(p =>
@@ -478,7 +481,7 @@ const gbox = document.getElementById("games");
 byTime.forEach(g => {
   const best = bestPerPlayer(g.players.flatMap(p => p.bets.map(b =>
     ({...b, who:p.name, proj:p.proj, score:conviction(b, p.proj)})))
-    .filter(b => b.fair >= PRICE_FLOOR)          // same floor as the rest of the site
+    .filter(b => shownPrice(b) >= PRICE_FLOOR)   // same floor as the rest of the site
     .sort((a,b) => b.score - a.score)).slice(0, 6);
   const d = document.createElement("details");
   d.innerHTML = `<summary><span class="match"><i class="dot" style="background:${COLORS[g.away]}"></i><i class="dot" style="background:${COLORS[g.home]}"></i>
