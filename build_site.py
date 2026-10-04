@@ -149,6 +149,12 @@ def fetch_odds(this_week=None, state=None, now=None):
         ev["h"], ev["a"] = ev["home"].map(TEAM_NAMES), ev["away"].map(TEAM_NAMES)
         book = {}
         now = datetime.now(timezone.utc)
+        if getattr(O, "CREDITS_LEFT", None) is not None and O.CREDITS_LEFT <= 0:
+            print("=" * 72)
+            print("ODDS API CREDITS EXHAUSTED — no FanDuel prices this run.")
+            print("The free tier resets on the 1st of the month. Until then the page shows the")
+            print("model's fair prices only, plus any prices already saved from earlier pulls.")
+            print("=" * 72)
         skipped_other_week = props_pulled = reused = 0
         for (eid, h, a), grp in ev.groupby(["event_id", "h", "a"]):
             if not h or not a:
@@ -181,6 +187,10 @@ def fetch_odds(this_week=None, state=None, now=None):
                         except Exception:
                             continue
                     reused += 1
+            if take and getattr(O, "CREDITS_LEFT", None) is not None and O.CREDITS_LEFT < len(PROP_MARKETS):
+                print(f"  skipping props for {key}: {O.CREDITS_LEFT:.0f} credits left, "
+                      f"{len(PROP_MARKETS)} needed")
+                take = False
             if take:
                 try:
                     pr = O.player_props(eid, markets=PROP_MARKETS)
@@ -335,6 +345,54 @@ def auto_injury_watch(m, week):
     return auto
 
 
+def production_profile(m, season, week):
+    """Yards and touchdowns per game over the last year of football. Current usage alone demotes a
+    star having a quiet month (Keenan Allen, Terry McLaurin); production over a season does not."""
+    try:
+        import nflreadpy as nfl
+        ps = pd.concat([nfl.load_player_stats(seasons=[season - 1, season]).to_pandas()])
+    except Exception as ex:
+        print(f"[stars] production history unavailable ({ex})")
+        return {}
+    ps = ps[(ps["season"] == season) | ((ps["season"] == season - 1) & (ps["week"] >= 8))]
+    name = "player_display_name" if "player_display_name" in ps.columns else "player_name"
+    g = ps.groupby(name).agg(games=("week", "size"),
+                             yds=("receiving_yards", "sum"), ryds=("rushing_yards", "sum"),
+                             tgt=("targets", "sum"), car=("carries", "sum"),
+                             rtd=("receiving_tds", "sum"), rutd=("rushing_tds", "sum"))
+    g = g[g["games"] >= 3]
+    per = pd.DataFrame({
+        "ypg": (g["yds"].fillna(0) + g["ryds"].fillna(0)) / g["games"],
+        "tpg": g["tgt"].fillna(0) / g["games"],
+        "cpg": g["car"].fillna(0) / g["games"],
+        "tdpg": (g["rtd"].fillna(0) + g["rutd"].fillna(0)) / g["games"]})
+    return per.to_dict("index")
+
+
+def matchup_grade(tp, opponent, pos):
+    """How friendly this opponent is for this position, from what they allow relative to the league.
+    Receivers are graded on yards allowed per target, runners on yards per carry."""
+    try:
+        col = "def_ypc" if pos in ("RB", "FB") else "def_ypt"
+        vals = tp[col].dropna()
+        if opponent not in vals.index or len(vals) < 10:
+            return None
+        v = float(vals[opponent])
+        rank = int((vals > v).sum()) + 1                    # 1 = allows the most
+        n = len(vals)
+        soft = rank <= n * 0.3
+        tough = rank >= n * 0.7
+        what = "yards per carry" if col == "def_ypc" else "yards per target"
+        return {"rating": "soft" if soft else "tough" if tough else "neutral",
+                "note": f"{opponent} allows the {_ordinal(rank)}-most {what}"}
+    except Exception:
+        return None
+
+
+def _ordinal(n):
+    return f"{n}{'th' if 11 <= n % 100 <= 13 else {1:'st', 2:'nd', 3:'rd'}.get(n % 10, 'th')}"
+
+
 def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     role_notes = []
     m = Model(season)
@@ -347,6 +405,7 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
     out_names, questionable, snap_limit, qb_named = overrides
     qb_named = dict(qb_named)                      # your overrides stay on top of anything automatic
     auto_q = auto_injury_watch(m, week) or {}
+    prod = production_profile(m, season, week)
     # live availability (Sleeper) closes the gap between Friday's report and kickoff
     cache = os.environ.get("NFL_EDGE_CACHE", "/tmp/nfl-cache")
     live_out, live_q = IN.availability(cache, m.features(week)[1])
@@ -428,7 +487,17 @@ def build(season, week, n_sims=20000, overrides=([], {}, {}, {})):
                                      g.away_team: round(float(sim.points[g.away_team].mean()), 1)},
                 "players": [], "parlays": []}
         for r in s[(s.targets_mean > 2) | (s.carries_mean > 4) | (s.pass_yds_mean > 0)].head(12).itertuples():
-            pl = {"name": r.player, "team": r.team, "pos": r.pos,
+            # "star" = a player an offence runs through, judged on the last year of production as
+            # well as this week's projected role, so a quiet month doesn't demote a known name.
+            pr = prod.get(r.player, {})
+            star = bool(r.pos == "QB"
+                        or pr.get("ypg", 0) >= 45 or pr.get("tpg", 0) >= 5.0
+                        or pr.get("cpg", 0) >= 10 or pr.get("tdpg", 0) >= 0.4
+                        or getattr(r, "s_tgt", 0) >= 0.17 or getattr(r, "s_car", 0) >= 0.45
+                        or r.targets_mean >= 6.0 or r.carries_mean >= 12.0)
+            opp = g.home_team if r.team == g.away_team else g.away_team
+            mu = matchup_grade(tp, opp, r.pos)
+            pl = {"name": r.player, "team": r.team, "pos": r.pos, "star": star, "matchup": mu,
                   "proj": {"rec": round(r.receptions_mean, 1), "rec_yds": round(r.rec_yds_mean, 1),
                            "rush_yds": round(r.rush_yds_mean, 1), "pass_yds": round(r.pass_yds_mean, 1)},
                   "bets": []}

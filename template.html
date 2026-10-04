@@ -162,6 +162,8 @@ h3{font-family:"Bricolage Grotesque",Georgia,serif;font-size:20px;letter-spacing
 @keyframes fill{to{width:var(--w)}}
 .why{color:var(--soft);font-size:13px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:2px}
 .why b{color:var(--pen);font-weight:600}
+.why .good{color:var(--win);font-weight:600}
+.why .bad{color:var(--soft)}
 .tagline{font-size:12.5px;font-weight:600;padding:3px 8px;border-radius:99px;border:1px solid currentColor}
 
 /* games / lines */
@@ -224,7 +226,7 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
 
   <div class="view on" id="v-picks">
     <h3>Best bets</h3>
-    <p class="note">Ranked by how strongly the model likes them, not by the odds offered.
+    <p class="note">The players each offence runs through, most likely first, with how the matchup grades.
       Bets priced shorter than −200 are left out — too much risk for the return.</p>
     <p class="note" id="pricenote"></p>
     <div class="filters" id="filters">
@@ -235,6 +237,8 @@ footer{max-width:680px;margin:0 auto;padding:22px 18px 40px;color:var(--soft);fo
       <button data-k="rush" aria-pressed="false">Rushing</button>
       <button data-k="pass" aria-pressed="false">Passing</button>
       <button data-k="value" aria-pressed="false" id="valueTab" hidden>Best prices</button>
+      <button data-k="matchup" aria-pressed="false">Good matchups</button>
+      <button data-k="everyone" aria-pressed="false">Include role players</button>
     </div>
     <div id="hero"></div>
     <div id="top"></div>
@@ -356,7 +360,8 @@ DATA.games = DATA.games.filter(g => {
 });
 let ALL = [];
 DATA.games.forEach(g => g.players.forEach(p => p.bets.forEach(b =>
-  ALL.push({...b, who:p.name, team:p.team, proj:p.proj, score:conviction(b, p.proj),
+  ALL.push({...b, who:p.name, team:p.team, proj:p.proj, star:p.star !== false, matchup:p.matchup,
+            score:conviction(b, p.proj),
             game:`${TEAMS[g.away]} at ${TEAMS[g.home]}`, gameCode:`${g.away}@${g.home}`, kick:g.kickoff}))));
 const PRICE_FLOOR = -200;   // nothing shorter than this: at -200 you risk 2 to win 1, which is
                             // about as much as a single bet is worth paying
@@ -403,7 +408,11 @@ function cardHTML(p, showGame = true){
   const priced = p.book !== undefined
     ? `FanDuel <b>${odds(p.book)}</b> · worth <b>${odds(p.fair)}</b>`
     : `worth about <b>${odds(p.fair)}</b>`;
-  const why = [showGame ? p.game : "", projLine(p), priced].filter(Boolean);
+  const mu = p.matchup && p.matchup.note
+    ? `<span class="${p.matchup.rating === "soft" ? "good" : p.matchup.rating === "tough" ? "bad" : ""}">${
+        p.matchup.rating === "soft" ? "good matchup" : p.matchup.rating === "tough" ? "tough matchup" : "even matchup"
+      } — ${p.matchup.note}</span>` : "";
+  const why = [showGame ? p.game : "", projLine(p), mu, priced].filter(Boolean);
   if (p.value) why.unshift(`<span class="pill val">VALUE +${Math.round(p.ev*100)}%</span>`);
   return `<div class="card" style="--team:${col}"><div class="top">
       <div class="bet">${p.who} — ${nice(p.bet)}</div>
@@ -452,9 +461,15 @@ function spreadAcrossGames(list, perGame = 2){
   });
 }
 function drawTop(){
-  const all = spreadAcrossGames(bestPerPlayer(kind === "all" ? ALL
-    : kind === "value" ? ALL.filter(p => p.value).sort((a,b) => b.ev - a.ev)
-    : ALL.filter(p => kindOf(p.bet) === kind)));
+  // Default board: the players an offence runs through, most likely first. Betting is supposed to
+  // be enjoyable — a board of recognisable names hitting often beats a board of obscure value.
+  const base = kind === "everyone" ? ALL
+             : kind === "matchup" ? ALL.filter(p => p.star && p.matchup && p.matchup.rating === "soft")
+             : ALL.filter(p => p.star);
+  const all = spreadAcrossGames(bestPerPlayer(
+      kind === "value" ? ALL.filter(p => p.value).sort((a,b) => b.ev - a.ev)
+    : (kind === "all" || kind === "everyone" || kind === "matchup") ? [...base].sort((a,b) => b.prob - a.prob)
+    : base.filter(p => kindOf(p.bet) === kind).sort((a,b) => b.prob - a.prob)));
   document.getElementById("hero").innerHTML = all.length ? heroHTML(all[0]) : "";
   const l = all.slice(1, 13);
   document.getElementById("top").innerHTML = l.length ? l.map(p => cardHTML(p)).join("")
@@ -684,6 +699,10 @@ function answerLocally(q){
       : `<p class="lead">No parlays match that. Try "best parlays".</p>`));
   }
   let l = ALL.filter(inScope);
+  if (!f.players.length && !f.risk.includes("long")) {
+    const stars = l.filter(x => x.star);
+    if (stars.length >= 3) l = stars;       // asked generally -> answer with the names they know
+  }
   if (f.wantsFirst) l = FIRST_TD.filter(inScope).sort((a, b) => b.prob - a.prob);
   else {
     l = l.filter(x => x.bet !== "first TD");            // keep them out of general lists
